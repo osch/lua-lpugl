@@ -1,0 +1,31 @@
+#ifndef LPUGL_VERSION_H
+#define LPUGL_VERSION_H
+
+#include "init.h"
+
+#ifndef LPUGL_VERSION
+    #error LPUGL_VERSION is not defined
+#endif 
+
+#ifndef LPUGL_BUILD_DATE
+    #error LPUGL_BUILD_DATE is not defined
+#endif 
+
+#define LPUGL_STRINGIFY(x) #x
+#define LPUGL_TOSTRING(x) LPUGL_STRINGIFY(x)
+#define LPUGL_VERSION_STRING LPUGL_TOSTRING(LPUGL_VERSION)
+
+#define LPUGL_BUILD_DATE_STRING LPUGL_TOSTRING(LPUGL_BUILD_DATE)
+
+#if defined(LPUGL_USE_WIN)
+    #define LPUGL_PLATFORM WIN
+#elif defined(LPUGL_USE_MAC)
+    #define LPUGL_PLATFORM MAC
+#elif defined(LPUGL_USE_X11)
+    #define LPUGL_PLATFORM X11
+#endif
+
+#define LPUGL_PLATFORM_STRING LPUGL_TOSTRING(LPUGL_PLATFORM)
+
+
+#endif // LPUGL_VERSION_H

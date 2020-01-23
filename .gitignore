@@ -1,0 +1,16 @@
+*.so
+*.dll
+*.o
+/pugl-repo/.clang-tidy
+/pugl-repo/.git
+/pugl-repo/.gitignore
+/pugl-repo/.gitlab-ci.yml
+/pugl-repo/doc/
+/pugl-repo/pugl.pc.in
+/pugl-repo/resources/
+/pugl-repo/shaders/
+/pugl-repo/test/
+/pugl-repo/waf
+/pugl-repo/waflib
+/pugl-repo/wscript
+/src/sandbox.mk
