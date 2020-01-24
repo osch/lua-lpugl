@@ -8,14 +8,23 @@ portable API for embeddable GUIs.
    * Windows
    * Mac OS X 
 
-#### Rendering backends: 
+#### Supported rendering backends: 
    * Cairo  (requires [OOCairo])
    * OpenGL
 
+Thanks to the modular architecture of Pugl, more rendering backends could be
+possible in the future. Different rendering backends can be combined in one
+application and also in the same window by embedding different view objects.
+
+#### LuaRocks modules:
+   * **[lpugl]**        - platform specific base module
+   * **[lpugl.cairo]**  - Cairo rendering backend module
+   * **[lpugl.opengl]** - OpenGL rendering backend module
+
 
 #### Further reading:
-   * [Documentation](./doc/README.md)
-   * [Examples](./example/README.md)
+   * [Documentation](./doc/README.md#lpugl-documentation)
+   * [Examples](./example/README.md#lpugl-examples)
 
 ## First Example
 
@@ -24,7 +33,7 @@ portable API for embeddable GUIs.
     ```lua
     local lpugl = require"lpugl.cairo"
     
-    local world = lpugl.newWorld("Hello World Example")
+    local world = lpugl.newWorld("Hello World App")
     
     local view = world:newView {
         title     = "Hello World Window",
@@ -34,10 +43,10 @@ portable API for embeddable GUIs.
     view:setEventFunc(function(event, ...)
         print(event, ...)
         if event == "EXPOSE" then
-            local x, y, w, h = ...
-            local cairo  = view:getDrawContext()
+            local cairo = view:getDrawContext()
+            local w, h  = view:getSize()
             cairo:set_source_rgb(0.9, 0.9, 0.9)
-            cairo:rectangle(x, y, w, h)
+            cairo:rectangle(0, 0, w, h)
             cairo:fill()
             cairo:set_source_rgb(0, 0, 0)
             cairo:select_font_face("sans-serif", "normal", "normal")
@@ -57,10 +66,11 @@ portable API for embeddable GUIs.
         world:pollEvents()
         world:dispatchEvents()
     end
-
     ```
 
-
+[lpugl]:                    https://luarocks.org/modules/osch/lpugl
+[lpugl.cairo]:              https://luarocks.org/modules/osch/lpugl.cairo
+[lpugl.opengl]:             https://luarocks.org/modules/osch/lpugl.opengl
 [Pugl]:                     https://drobilla.net/software/pugl
 [OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 

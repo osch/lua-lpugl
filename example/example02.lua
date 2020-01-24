@@ -12,7 +12,7 @@ view:setSize(300, 100)
 view:setEventFunc(function(event, ...)
     print(event, ...)
     if event == "EXPOSE" then
-        local x, y, w, h = ...
+        local w, h  = view:getSize()
         gl.Viewport(0, 0, w, h)
         gl.MatrixMode('PROJECTION')
         gl.LoadIdentity()

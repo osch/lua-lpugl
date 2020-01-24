@@ -1,19 +1,19 @@
 local lpugl = require"lpugl.cairo"
 
-local world = lpugl.newWorld("Cairo Example App")
+local world = lpugl.newWorld("Hello World App")
 
 local view = world:newView {
-    title     = "Cairo Example Window",
+    title     = "Hello World Window",
     resizable = true
 }
 view:setSize(300, 100)
 view:setEventFunc(function(event, ...)
     print(event, ...)
     if event == "EXPOSE" then
-        local x, y, w, h = ...
-        local cairo  = view:getDrawContext()
+        local cairo = view:getDrawContext()
+        local w, h  = view:getSize()
         cairo:set_source_rgb(0.9, 0.9, 0.9)
-        cairo:rectangle(x, y, w, h)
+        cairo:rectangle(0, 0, w, h)
         cairo:fill()
         cairo:set_source_rgb(0, 0, 0)
         cairo:select_font_face("sans-serif", "normal", "normal")
@@ -33,4 +33,3 @@ while world:hasViews() do
     world:pollEvents()
     world:dispatchEvents()
 end
-
