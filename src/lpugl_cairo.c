@@ -102,7 +102,7 @@ static int Backend_getLayoutContext(lua_State* L)
     }                                                                  /* -> uservalue, context, meta */
     lua_setmetatable(L, -2);                                           /* -> uservalue, context */
     lua_pushvalue(L, -1);                                              /* -> uservalue, context, context */
-    lua_rawseti(L, -3, -1);                                            /* -> uservalue, context */
+    lua_rawseti(L, -3, LPUGL_CAIRO_BACKEND_UV_LAYOUT_CTX);             /* -> uservalue, context */
     
 #if defined(LPUGL_USE_X11)
     Display*     display = (Display*) puglCairoBackendGetNativeWorld(udata->base.world->puglWorld);

@@ -912,6 +912,13 @@ puglSetClipboard(PuglWorld*  world,
                  size_t      len);
 
 /**
+  Returns true iff the given world owns the clipboard. This
+  is always false on Win and Mac.
+*/
+PUGL_API bool
+puglHasClipboard(PuglWorld*  world);
+
+/**
    Request user attention.
 
    This hints to the system that the window or application requires attention

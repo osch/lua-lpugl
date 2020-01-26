@@ -711,6 +711,27 @@ static int View_getDrawContext(lua_State* L)
     }
 }
 
+/* ============================================================================================ */
+
+static int View_getLayoutContext(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+
+    lua_getuservalue(L, 1);                                           /* -> uservalue */
+    lua_rawgeti(L, -1, LPUGL_VIEW_UV_BACKEND);                        /* -> uservalue, backend */
+    if (lua_getfield(L, -1, "getLayoutContext") == LUA_TFUNCTION) {   /* -> uservalue, backend, getLayoutContext */
+        lua_pushvalue(L, -2);                                         /* -> uservalue, backend, getLayoutContext, backend */
+        lua_call(L, 1, 1);                                            /* -> uservalue, backend, rslt */
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 
 /* ============================================================================================ */
 
@@ -883,6 +904,7 @@ static const luaL_Reg ViewMethods[] =
     { "isClosed",           View_isClosed     },
     { "isVisible",          View_isVisible    },
     { "getDrawContext",     View_getDrawContext  },
+    { "getLayoutContext",   View_getLayoutContext  },
     { "setFrame",           View_setFrame        },
     { "getFrame",           View_getFrame        },
     { "setSize",            View_setSize         },

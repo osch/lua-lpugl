@@ -191,7 +191,7 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl(lua_State* L)
     }
     
     lua_pushliteral(L, LPUGL_PLATFORM_STRING);      /* -> string */
-    lua_setfield(L, module, "PLATFORM");            /* -> */
+    lua_setfield(L, module, "platform");            /* -> */
     
     lua_pushinteger(L, PUGL_MOD_SHIFT);             /* -> integer */
     lua_setfield(L, module, "MOD_SHIFT");           /* -> */

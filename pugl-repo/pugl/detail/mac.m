@@ -1396,6 +1396,13 @@ puglSetClipboard(PuglWorld*  world,
 	return PUGL_SUCCESS;
 }
 
+
+bool
+puglHasClipboard(PuglWorld*  world)
+{
+	return false;
+}
+
 const PuglBackend*
 puglStubBackend(void)
 {
