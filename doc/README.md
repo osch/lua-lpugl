@@ -284,7 +284,7 @@ TODO
   To use this feature you have to obtain the world's id by invoking
   [*world:id()*](#world_id) and transfer this integer id to the background thread. On
   the background thread  invoke [*lpugl.world(id)*](#lpugl_world) to obtain a 
-  restricted access object on which the method *world:id()* can be invoked.
+  restricted access object on which the method *world:awake()* can be invoked.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
