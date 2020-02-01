@@ -59,10 +59,10 @@
 
 struct PuglWorldInternalsImpl {
 	NSApplication*     app;
-	NSAutoreleasePool* autoreleasePool;
 	double             nextProcessTime;
 	id                 worldProxy;
 	NSTimer*           processTimer;
+	bool               polling;
 };
 
 struct PuglInternalsImpl {

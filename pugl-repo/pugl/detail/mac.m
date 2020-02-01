@@ -100,23 +100,51 @@ rescheduleProcessTimer(PuglWorld* world)
 @implementation PuglWorldProxy
 - (void) processTimerCallback
 {
-	if (world) {
-		PuglWorldInternals* impl = world->impl;
-		if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)) {
-		    releaseProcessTimer(impl);
-		    impl->nextProcessTime = -1;
-		    if (world->processFunc) world->processFunc(world, world->processUserData);
-		}
-		else {
-		   rescheduleProcessTimer(world);
-		}
-	}
+        if (world) {
+                PuglWorldInternals* impl = world->impl;
+                if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)) {
+                    releaseProcessTimer(impl);
+                    impl->nextProcessTime = -1;
+                    if (world->processFunc) {
+                        world->processFunc(world, world->processUserData);
+                        if (world->impl->polling) {
+                            NSEvent* event = [NSEvent otherEventWithType: NSEventTypeApplicationDefined
+                                                                location: NSMakePoint(0,0)
+                                                            modifierFlags: 0
+                                                                timestamp: 0.0
+                                                             windowNumber: 0
+                                                                  context: nil
+                                                                  subtype: 0
+                                                                    data1: 0
+                                                                    data2: 0];
+                            [world->impl->app postEvent:event atStart:false];
+                        }
+                    }
+                }
+                else {
+                   rescheduleProcessTimer(world);
+                }
+        }
 
 }
 - (void) awakeCallback
 {
 	if (world) {
-		if (world->processFunc) world->processFunc(world, world->processUserData);
+		if (world->processFunc) {
+		    world->processFunc(world, world->processUserData);
+		    if (world->impl->polling) {
+		        NSEvent* event = [NSEvent otherEventWithType: NSEventTypeApplicationDefined
+		                                            location: NSMakePoint(0,0)
+                                                       modifierFlags: 0
+                                                           timestamp: 0.0
+                                                        windowNumber: 0
+                                                             context: nil
+                                                             subtype: 0
+                                                               data1: 0
+                                                               data2: 0];
+		        [world->impl->app postEvent:event atStart:false];
+		    }   
+		}
 	}
 }
 - (void) setPuglWorld:(PuglWorld*)w
@@ -830,7 +858,6 @@ puglInitWorldInternals(void)
 		1, sizeof(PuglWorldInternals));
 
 	impl->app             = [NSApplication sharedApplication];
-	impl->autoreleasePool = [NSAutoreleasePool new];
 
 	return impl;
 }
@@ -844,7 +871,6 @@ puglFreeWorldInternals(PuglWorld* world)
 		[world->impl->worldProxy release];
 		world->impl->worldProxy = NULL;
 	}
-	[world->impl->autoreleasePool drain];
 	free(world->impl);
 }
 
@@ -1108,11 +1134,7 @@ puglSetProcessFunc(PuglWorld* world, PuglProcessFunc processFunc, void* userData
 	if (processFunc) {
 	    if (!world->impl->worldProxy) {
 	        world->impl->worldProxy = [[PuglWorldProxy alloc] init];
-	    }
-	    [world->impl->worldProxy setPuglWorld: world];
-	} else {
-	    if (world->impl->worldProxy) {
-	        [world->impl->worldProxy setPuglWorld: NULL];
+	        [world->impl->worldProxy setPuglWorld: world];
 	    }
 	}
 }
@@ -1137,6 +1159,8 @@ puglSetNextProcessTime(PuglWorld* world, double seconds)
 PuglStatus
 puglPollEvents(PuglWorld* world, const double timeout)
 {
+	world->impl->polling = true;
+	
 	NSDate* date = ((timeout < 0) ? [NSDate distantFuture] :
 	                (timeout == 0) ? nil :
 	                [NSDate dateWithTimeIntervalSinceNow:timeout]);
@@ -1149,6 +1173,8 @@ puglPollEvents(PuglWorld* world, const double timeout)
 	                     untilDate:date
 	                     inMode:NSDefaultRunLoopMode
 	                     dequeue:YES];
+
+	world->impl->polling = false;
 	if (event) {
 		[world->impl->app postEvent:event atStart:true];
 		return PUGL_SUCCESS;
