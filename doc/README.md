@@ -27,6 +27,7 @@
         * [world:setClipboard()](#world_setClipboard)
         * [world:hasClipboard()](#world_hasClipboard)
         * [world:close()](#world_close)
+        * [world:isClosed()](#world_isClosed)
    * [View Methods](#view-methods)
         * [view:show()](#view_show)
         * [view:hide()](#view_hide)
@@ -34,6 +35,7 @@
         * [view:getLayoutContext()](#view_getLayoutContext)
         * [view:getDrawContext()](#view_getDrawContext)
         * [view:close()](#view_close)
+        * [view:isClosed()](#view_isClosed)
    * [Backend Methods](#backend-methods)
         * [cairoBackend:getLayoutContext()](#cairoBackend_getLayoutContext)
 
@@ -338,6 +340,13 @@ TODO
   This method is also invoked if the last Lua reference to the Pugl world
   is lost and the  world object becomes garbage collected.
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="world_isClosed">**`             world:isClosed()
+  `**</a>
+  
+  Returns `true` if the Pugl world was closed.
+  
 TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
@@ -385,6 +394,13 @@ TODO
   `**</a>
   
   Closes the view. Once a view is closed, it cannot be re-opened. 
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_isClosed">**`             view:isClosed()
+  `**</a>
+  
+  Returns `true` if the Pugl view was closed.
   
   
 TODO

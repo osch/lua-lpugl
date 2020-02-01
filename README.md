@@ -1,4 +1,6 @@
 # lpugl
+[![Licence](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENSE)
+[![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen.svg)](https://luarocks.org/modules/osch/lpugl)
 
 LPugl is a minimal Lua-API for building GUIs. It is based on [Pugl], a minimal
 portable API for embeddable GUIs.
