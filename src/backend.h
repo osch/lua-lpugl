@@ -16,7 +16,7 @@ typedef struct LpuglBackend {
     int                  used;
     const PuglBackend*   puglBackend;
     int                  (*newDrawContext)(lua_State* L, void* context);
-    int                  (*finishDrawContext)(lua_State* L);
+    int                  (*finishDrawContext)(lua_State* L, int contextIdx);
     void                 (*closeBackend)(lua_State* L, int backendIdx);
 
 } LpuglBackend;

@@ -148,195 +148,202 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
         fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
         abort();
     }
-    
-    lua_State* L = world->eventL;
-    int oldTop = lua_gettop(L);
-    
-    lua_checkstack(L, LUA_MINSTACK);
 
     int nargs = udata->eventFuncNargs;
     if (nargs < 0) {
         return PUGL_SUCCESS;
     }
     
-    if (   lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef) == LUA_TTABLE /* -> weakWorld */
-        && lua_rawgetp(L, -1, udata) == LUA_TUSERDATA                           /* -> weakWorld, viewUdata */
-        && lua_getuservalue(L, -1) == LUA_TTABLE)                               /* -> weakWorld, viewUdata, viewUservalue */
-    {
-        int uservalue = lua_gettop(L);
-        int udataIdx  = uservalue - 1;
-        int weakWorld = uservalue - 2;
-        
-        const char* eventName = NULL;
-        switch (event->type) {
-            case PUGL_CONFIGURE:          eventName = "CONFIGURE"; break;
-            case PUGL_BUTTON_PRESS:       eventName = "BUTTON_PRESS"; break;
-            case PUGL_BUTTON_RELEASE:     eventName = "BUTTON_RELEASE"; break;
-            case PUGL_KEY_PRESS:          eventName = "KEY_PRESS"; break;
-            case PUGL_KEY_RELEASE:        eventName = "KEY_RELEASE"; break;
-            case PUGL_ENTER_NOTIFY:       eventName = "ENTER_NOTIFY"; break;
-            case PUGL_LEAVE_NOTIFY:       eventName = "LEAVE_NOTIFY"; break;
-            case PUGL_MOTION_NOTIFY:      eventName = "MOTION_NOTIFY"; break;
-            case PUGL_SCROLL:             eventName = "SCROLL"; break;
-            case PUGL_FOCUS_IN:           eventName = "FOCUS_IN"; break;
-            case PUGL_FOCUS_OUT:          eventName = "FOCUS_OUT"; break;
-            case PUGL_EXPOSE:             eventName = "EXPOSE"; break;
-            case PUGL_CLOSE:              eventName = "CLOSE"; break;
-            case PUGL_DESTROY:            closeView(L, udata, udataIdx); break;
-            case PUGL_DATA_RECEIVED:      eventName = "DATA_RECEIVED"; break;
-            default:                      eventName = NULL; break;
-        }
-        if (eventName) {
-            lua_pushcfunction(L, lpugl_world_errormsghandler);
-            int msgh = lua_gettop(L);
-            for (int i = 0; i <= nargs; ++i) {
-                lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_EVENTFUNC + i);
-            }
-            lua_pushstring(L, eventName); ++nargs;
-            switch (event->type) {
-                case PUGL_BUTTON_PRESS:    
-                case PUGL_BUTTON_RELEASE: {
-                    lua_pushinteger(L, (int)floor(event->button.x + 0.5)); ++nargs;
-                    lua_pushinteger(L, (int)floor(event->button.y + 0.5)); ++nargs;
-                    lua_pushinteger(L, event->button.button);              ++nargs;
-                    lua_pushinteger(L, event->button.state);               ++nargs;
-                    break;
-                }
-                case PUGL_KEY_PRESS:    
-                case PUGL_KEY_RELEASE: {
-                    if (event->key.key) {
-                        const char* keyName = puglKeyToName(event->key.key);
-                        if (keyName) {
-                            lua_pushstring(L, keyName); ++nargs;
-                        } else {
-                            char keyAsString[4];
-                            int len = convertUnicodeCharToUtf8(event->key.key, keyAsString);
-                            lua_pushlstring(L, keyAsString, len); ++nargs;
-                        }
-                    } else {
-                        lua_pushnil(L); ++nargs;
-                    }
-                    lua_pushinteger(L, event->key.state);  ++nargs;
-                    if (event->key.inputLength > 0) {
-                        if (event->key.inputLength <= 8) {
-                            lua_pushlstring(L, event->key.input.data,
-                                               event->key.inputLength); ++nargs;
-                        } else {
-                            lua_pushlstring(L, event->key.input.ptr,
-                                               event->key.inputLength); ++nargs;
-                        }
-                    } else {
-                        lua_pushnil(L); ++nargs;
-                    }
-                    break;
-                }
-                case PUGL_ENTER_NOTIFY: 
-                case PUGL_LEAVE_NOTIFY: {
-                    lua_pushinteger(L, (int)floor(event->crossing.x + 0.5)); ++nargs;
-                    lua_pushinteger(L, (int)floor(event->crossing.y + 0.5)); ++nargs;
-                    break;
-                }
-                case PUGL_MOTION_NOTIFY: {
-                    lua_pushinteger(L, (int)floor(event->motion.x + 0.5)); ++nargs;
-                    lua_pushinteger(L, (int)floor(event->motion.y + 0.5)); ++nargs;
-                    break;
-                }
-                case PUGL_SCROLL: {
-                    lua_pushnumber(L, event->scroll.dx); ++nargs;
-                    lua_pushnumber(L, event->scroll.dy); ++nargs;
-                    break;
-                }
-                case PUGL_FOCUS_IN:
-                case PUGL_FOCUS_OUT: {
-                    break;
-                }
-                case PUGL_EXPOSE: {
-                    int x1 = (int)floor(event->expose.x);
-                    int y1 = (int)floor(event->expose.y);
-                    int x2 = (int)ceil (event->expose.x + event->expose.width);
-                    int y2 = (int)ceil (event->expose.y + event->expose.height);
-                    lua_pushinteger(L, x1);                  ++nargs;
-                    lua_pushinteger(L, y1);                  ++nargs;
-                    lua_pushinteger(L, x2 - x1);             ++nargs;
-                    lua_pushinteger(L, y2 - y1);             ++nargs;
-                    lua_pushinteger(L, event->expose.count); ++nargs;
-                    udata->drawing = true;
-                    break;
-                }
-                case PUGL_CONFIGURE: {
-                    int x1 = (int)floor(event->configure.x);
-                    int y1 = (int)floor(event->configure.y);
-                    int x2 = (int)ceil (event->configure.x + event->configure.width);
-                    int y2 = (int)ceil (event->configure.y + event->configure.height);
-                    lua_pushinteger(L, x1);                  ++nargs;
-                    lua_pushinteger(L, y1);                  ++nargs;
-                    lua_pushinteger(L, x2 - x1);             ++nargs;
-                    lua_pushinteger(L, y2 - y1);             ++nargs;
-                    break;
-                }
-                case PUGL_DATA_RECEIVED: {
-                    lua_pushlstring(L, event->received.data, 
-                                       event->received.len); ++nargs;
-                    break;
-                }
-                case PUGL_NOTHING:
-                case PUGL_CLOSE:
-                case PUGL_DESTROY: 
-                    break;
-            }
-            int rc = lua_pcall(L, nargs, 0, msgh);
+    bool wasInCallback = world->inCallback;
+    world->inCallback = true;
 
-            if (udata->drawing) {
-                udata->drawing = false;
-                if (lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_DRAWCTX) == LUA_TUSERDATA)
-                {                                                     /* -> context */
-                    if (udata->backend->finishDrawContext) {
-                        udata->backend->finishDrawContext(L);
-                    }
-                    lua_pushnil(L);                                   /* -> context, nil */
-                    lua_setmetatable(L, -2);                          /* -> context */
-                    lua_pushnil(L);                                   /* -> context, nil */
-                    lua_rawseti(L, uservalue, LPUGL_VIEW_UV_DRAWCTX); /* -> context */
-                }
-                lua_pop(L, 1);                                        /* -> */
-            }
-            
-            if (rc != 0) {                                                              /* -> error */
-                bool handled = false;
-                int error = lua_gettop(L);
-                if (lua_rawgeti(L, weakWorld, 0) == LUA_TUSERDATA                       /* -> error, world */
-                 && lua_getuservalue(L, -1) == LUA_TTABLE)                              /* -> error, world, worldUserValue */
-                {
-                    if (lua_rawgeti(L, -1, LPUGL_WORLD_UV_ERRFUNC) == LUA_TFUNCTION)     /* -> error, world, worldUserValue, errFunc */
-                    {
-                        lua_rawgeti(L, -4, 1);                                          /* -> error, world, worldUserValue, errFunc, error[1] */
-                        lua_rawgeti(L, -5, 2);                                          /* -> error, world, worldUserValue, errFunc, error[1], error[2] */
-                        int rc2 = lua_pcall(L, 2, 0, msgh);                             /* -> error, world, worldUserValue, ? */
-                        if (rc2 == 0) {
-                            handled = true;                                             /* -> error, world, worldUserValue */
-                        } else {                                                        /* -> error, world, worldUserValue, error2 */
-                            lua_rawgeti(L, -1, 1);                                      /* -> error, world, worldUserValue, error2, errmsg2 */
-                            fprintf(stderr, 
-                                    "%s: %s\n", LPUGL_ERROR_ERROR_IN_ERROR_HANDLING,
-                                    lua_tostring(L, -1));
-                        }
-                    }
-                } else {
-                    fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
-                    abort();
-                }
-                if (!handled) {
-                    lua_rawgeti(L, error, 1);                                          /* -> errmsg */
-                    fprintf(stderr, 
-                            "%s: %s\n", LPUGL_ERROR_ERROR_IN_EVENT_HANDLING,
-                            lua_tostring(L, -1));
-                    abort();
-                }
-            }
-        }
-    } else {
+    lua_State* L = world->eventL;
+    int oldTop = lua_gettop(L);
+    
+    lua_checkstack(L, LUA_MINSTACK);
+
+    if (   lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef) != LUA_TTABLE /* -> weakWorld */
+        || lua_rawgetp(L, -1, udata) != LUA_TUSERDATA                           /* -> weakWorld, viewUdata */
+        || lua_getuservalue(L, -1) != LUA_TTABLE)                               /* -> weakWorld, viewUdata, viewUservalue */
+    {
         fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
         abort();
+    }
+    int uservalue = lua_gettop(L);
+    int udataIdx  = uservalue - 1;
+    int weakWorld = uservalue - 2;
+    
+    const char* eventName = NULL;
+    switch (event->type) {
+        case PUGL_CONFIGURE:          eventName = "CONFIGURE"; break;
+        case PUGL_BUTTON_PRESS:       eventName = "BUTTON_PRESS"; break;
+        case PUGL_BUTTON_RELEASE:     eventName = "BUTTON_RELEASE"; break;
+        case PUGL_KEY_PRESS:          eventName = "KEY_PRESS"; break;
+        case PUGL_KEY_RELEASE:        eventName = "KEY_RELEASE"; break;
+        case PUGL_ENTER_NOTIFY:       eventName = "ENTER_NOTIFY"; break;
+        case PUGL_LEAVE_NOTIFY:       eventName = "LEAVE_NOTIFY"; break;
+        case PUGL_MOTION_NOTIFY:      eventName = "MOTION_NOTIFY"; break;
+        case PUGL_SCROLL:             eventName = "SCROLL"; break;
+        case PUGL_FOCUS_IN:           eventName = "FOCUS_IN"; break;
+        case PUGL_FOCUS_OUT:          eventName = "FOCUS_OUT"; break;
+        case PUGL_EXPOSE:             eventName = "EXPOSE"; break;
+        case PUGL_CLOSE:              eventName = "CLOSE"; break;
+        case PUGL_DESTROY:            closeView(L, udata, udataIdx); break;
+        case PUGL_DATA_RECEIVED:      eventName = "DATA_RECEIVED"; break;
+        default:                      eventName = NULL; break;
+    }
+    if (eventName) {
+        lua_pushcfunction(L, lpugl_world_errormsghandler);
+        int msgh = lua_gettop(L);
+        for (int i = 0; i <= nargs; ++i) {
+            lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_EVENTFUNC + i);
+        }
+        lua_pushstring(L, eventName); ++nargs;
+        switch (event->type) {
+            case PUGL_BUTTON_PRESS:    
+            case PUGL_BUTTON_RELEASE: {
+                lua_pushinteger(L, (int)floor(event->button.x + 0.5)); ++nargs;
+                lua_pushinteger(L, (int)floor(event->button.y + 0.5)); ++nargs;
+                lua_pushinteger(L, event->button.button);              ++nargs;
+                lua_pushinteger(L, event->button.state);               ++nargs;
+                break;
+            }
+            case PUGL_KEY_PRESS:    
+            case PUGL_KEY_RELEASE: {
+                if (event->key.key) {
+                    const char* keyName = puglKeyToName(event->key.key);
+                    if (keyName) {
+                        lua_pushstring(L, keyName); ++nargs;
+                    } else {
+                        char keyAsString[4];
+                        int len = convertUnicodeCharToUtf8(event->key.key, keyAsString);
+                        lua_pushlstring(L, keyAsString, len); ++nargs;
+                    }
+                } else {
+                    lua_pushnil(L); ++nargs;
+                }
+                lua_pushinteger(L, event->key.state);  ++nargs;
+                if (event->key.inputLength > 0) {
+                    if (event->key.inputLength <= 8) {
+                        lua_pushlstring(L, event->key.input.data,
+                                           event->key.inputLength); ++nargs;
+                    } else {
+                        lua_pushlstring(L, event->key.input.ptr,
+                                           event->key.inputLength); ++nargs;
+                    }
+                } else {
+                    lua_pushnil(L); ++nargs;
+                }
+                break;
+            }
+            case PUGL_ENTER_NOTIFY: 
+            case PUGL_LEAVE_NOTIFY: {
+                lua_pushinteger(L, (int)floor(event->crossing.x + 0.5)); ++nargs;
+                lua_pushinteger(L, (int)floor(event->crossing.y + 0.5)); ++nargs;
+                break;
+            }
+            case PUGL_MOTION_NOTIFY: {
+                lua_pushinteger(L, (int)floor(event->motion.x + 0.5)); ++nargs;
+                lua_pushinteger(L, (int)floor(event->motion.y + 0.5)); ++nargs;
+                break;
+            }
+            case PUGL_SCROLL: {
+                lua_pushnumber(L, event->scroll.dx); ++nargs;
+                lua_pushnumber(L, event->scroll.dy); ++nargs;
+                break;
+            }
+            case PUGL_FOCUS_IN:
+            case PUGL_FOCUS_OUT: {
+                break;
+            }
+            case PUGL_EXPOSE: {
+                int x1 = (int)floor(event->expose.x);
+                int y1 = (int)floor(event->expose.y);
+                int x2 = (int)ceil (event->expose.x + event->expose.width);
+                int y2 = (int)ceil (event->expose.y + event->expose.height);
+                lua_pushinteger(L, x1);                  ++nargs;
+                lua_pushinteger(L, y1);                  ++nargs;
+                lua_pushinteger(L, x2 - x1);             ++nargs;
+                lua_pushinteger(L, y2 - y1);             ++nargs;
+                lua_pushinteger(L, event->expose.count); ++nargs;
+                udata->drawing = true;
+                break;
+            }
+            case PUGL_CONFIGURE: {
+                int x1 = (int)floor(event->configure.x);
+                int y1 = (int)floor(event->configure.y);
+                int x2 = (int)ceil (event->configure.x + event->configure.width);
+                int y2 = (int)ceil (event->configure.y + event->configure.height);
+                lua_pushinteger(L, x1);                  ++nargs;
+                lua_pushinteger(L, y1);                  ++nargs;
+                lua_pushinteger(L, x2 - x1);             ++nargs;
+                lua_pushinteger(L, y2 - y1);             ++nargs;
+                break;
+            }
+            case PUGL_DATA_RECEIVED: {
+                lua_pushlstring(L, event->received.data, 
+                                   event->received.len); ++nargs;
+                break;
+            }
+            case PUGL_NOTHING:
+            case PUGL_CLOSE:
+            case PUGL_DESTROY: 
+                break;
+        }
+        int rc = lua_pcall(L, nargs, 0, msgh);
+
+        world->inCallback = wasInCallback;
+        if (!wasInCallback && world->mustClosePugl) {
+            lpugl_world_close_pugl(world);
+        }
+    
+        if (udata->drawing) {
+            udata->drawing = false;
+            if (lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_DRAWCTX) == LUA_TUSERDATA)
+            {                                                     /* -> context */
+                if (udata->backend->finishDrawContext) {
+                    udata->backend->finishDrawContext(L, lua_gettop(L));
+                }
+                lua_pushnil(L);                                   /* -> context, nil */
+                lua_setmetatable(L, -2);                          /* -> context */
+                lua_pushnil(L);                                   /* -> context, nil */
+                lua_rawseti(L, uservalue, LPUGL_VIEW_UV_DRAWCTX); /* -> context */
+            }
+            lua_pop(L, 1);                                        /* -> */
+        }
+        
+        if (rc != 0) {                                                              /* -> error */
+            bool handled = false;
+            int error = lua_gettop(L);
+            if (lua_rawgeti(L, weakWorld, 0) == LUA_TUSERDATA                       /* -> error, world */
+             && lua_getuservalue(L, -1) == LUA_TTABLE)                              /* -> error, world, worldUserValue */
+            {
+                if (lua_rawgeti(L, -1, LPUGL_WORLD_UV_ERRFUNC) == LUA_TFUNCTION)     /* -> error, world, worldUserValue, errFunc */
+                {
+                    lua_rawgeti(L, -4, 1);                                          /* -> error, world, worldUserValue, errFunc, error[1] */
+                    lua_rawgeti(L, -5, 2);                                          /* -> error, world, worldUserValue, errFunc, error[1], error[2] */
+                    int rc2 = lua_pcall(L, 2, 0, msgh);                             /* -> error, world, worldUserValue, ? */
+                    if (rc2 == 0) {
+                        handled = true;                                             /* -> error, world, worldUserValue */
+                    } else {                                                        /* -> error, world, worldUserValue, error2 */
+                        lua_rawgeti(L, -1, 1);                                      /* -> error, world, worldUserValue, error2, errmsg2 */
+                        fprintf(stderr, 
+                                "%s: %s\n", LPUGL_ERROR_ERROR_IN_ERROR_HANDLING,
+                                lua_tostring(L, -1));
+                    }
+                }
+            } else {
+                fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
+                abort();
+            }
+            if (!handled) {
+                lua_rawgeti(L, error, 1);                                          /* -> errmsg */
+                fprintf(stderr, 
+                        "%s: %s\n", LPUGL_ERROR_ERROR_IN_EVENT_HANDLING,
+                        lua_tostring(L, -1));
+                abort();
+            }
+        }
     }
     
     lua_settop(L, oldTop);

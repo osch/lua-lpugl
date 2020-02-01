@@ -166,9 +166,9 @@ static int newDrawContext(lua_State* L, void* nativeContext)           /* -> vie
 
 /* ============================================================================================ */
 
-static int finishDrawContext(lua_State* L)
+static int finishDrawContext(lua_State* L, int contextIdx)
 {
-    cairo_t** context = lua_touserdata(L, -1);        /* -> context */
+    cairo_t** context = lua_touserdata(L, contextIdx);   /* -> context */
     if (*context) {
         cairo_destroy(*context);
         *context = NULL;

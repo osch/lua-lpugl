@@ -1003,8 +1003,8 @@ puglPostRedisplayRect(PuglView* view, PuglRect rect)
 	int y = (int)floor(rect.y);
 	int w = (int)ceil(rect.x + rect.width) - x;
 	int h = (int)ceil(rect.y + rect.height) - y;
-	if (x < 0) x = 0;
-	if (y < 0) y = 0;
+	if (x < 0) { w += x; x = 0; }
+	if (y < 0) { h += y; y = 0; }
 	if (w <= 0 || h <= 0) return PUGL_FAILURE;
 	XExposeEvent ev = {Expose, 0, True,
 	                   view->impl->display, view->impl->win,

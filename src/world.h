@@ -30,6 +30,8 @@ typedef struct LpuglWorld {
     int                   weakWorldRef;
     int                   viewCount;
     lua_State*            eventL;
+    bool                  inCallback;
+    bool                  mustClosePugl;
     AtomicCounter         awakeSent;
     void                  (*registrateBackend)(lua_State* L, int worldIdx, int backendIdx);
     void                  (*deregistrateBackend)(lua_State* L, int worldIdx, int backendIdx);
@@ -50,6 +52,8 @@ typedef struct WorldUserData {
 /* ============================================================================================ */
 
 int lpugl_world_errormsghandler(lua_State* L);
+
+void lpugl_world_close_pugl(LpuglWorld* world);
 
 int lpugl_world_init_module(lua_State* L, int module);
 
