@@ -3,6 +3,6 @@
 
 #include "base.h"
 
-LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo(lua_State* L);
+LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo_intern(lua_State* L);
 
 #endif // LPUGL_CAIRO_MAIN_H

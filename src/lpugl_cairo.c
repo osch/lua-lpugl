@@ -369,7 +369,7 @@ static void setupBackendMeta(lua_State* L)
     lua_setfield (L, -2, "__index");
 }
 
-LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo(lua_State* L)
+LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo_intern(lua_State* L)
 {
     luaL_checkversion(L); /* does nothing if compiled for Lua 5.1 */
     

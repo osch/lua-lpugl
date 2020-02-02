@@ -1,5 +1,13 @@
-.PHONY: default lpugl lpugl.cairo
+.PHONY: default \
+        lpugl \
+        lpugl.cairo \
+        lpugl.opengl
 default: lpugl lpugl.cairo lpugl.opengl
+
+.PHONY: cairo opengl base
+base: lpugl
+cairo: lpugl.cairo
+opengl: lpugl.opengl
 
 BUILD_DATE=$(shell date "+%Y-%m-%dT%H:%M:%S")
 
@@ -68,7 +76,7 @@ lpugl.cairo:
 	    $(COPTS) \
 	    -I /usr/include/cairo \
 	    -I../pugl-repo/ \
-	    -o lpugl/cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
+	    -o lpugl/cairo_intern.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    async_util.c   util.c pugl_cairo.$(PUGLC_EXT) \
 	    lpugl_compat.c \
@@ -84,3 +92,4 @@ lpugl.opengl:
 	    async_util.c   util.c pugl_opengl.$(PUGLC_EXT) \
 	    lpugl_compat.c \
 	    $(LOPTS) $(LOPTS_OPENGL)
+

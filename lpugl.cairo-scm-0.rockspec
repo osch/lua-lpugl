@@ -31,21 +31,21 @@ build = {
   platforms = {
     linux = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl.cairo_intern"] = {
           libraries = { "cairo", "pthread" },
         }
       }
     },
     windows = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl.cairo_intern"] = {
           libraries = { "cairo", "kernel32", "gdi32", "user32" },
         }
       }
     },
     macosx = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl.cairo_intern"] = {
           sources   = { "src/pugl_cairo.m" },
           libraries = { "cairo", "pthread"  },
           variables = {
@@ -58,7 +58,8 @@ build = {
     },
   },
   modules = {
-    ["lpugl.cairo"] = {
+    ["lpugl.cairo"] = "src/lpugl/cairo.lua",
+    ["lpugl.cairo_intern"] = {
       sources = { "src/pugl_cairo.c",
                   "src/lpugl_cairo.c",
                   "src/lpugl_compat.c" },
