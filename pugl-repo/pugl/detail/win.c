@@ -112,20 +112,27 @@ puglInitWorldInternals(void)
 	return impl;
 }
 
-static char*
+static wchar_t*
 puglWindowClassName(const char* className, const char* suffix)
 {
 	size_t len1 = strlen(className);
 	size_t len2 = suffix ? strlen(suffix) : 0;
 	size_t len  = len1 + len2;
 	char* buffer = malloc(len + 10);
+	wchar_t* wbuffer = NULL;
 	if (buffer) {
 		strcpy(buffer, className);
 		if (suffix) strcpy(buffer + len1, suffix);
 		int i = 0;
-		WNDCLASSEX wc = { 0 };
+		WNDCLASSEXW wc = { 0 };
 		while (i < 32000) {
-			if (GetClassInfoEx(GetModuleHandle(NULL), buffer, &wc)) {
+		        if (wbuffer) free(wbuffer);
+			wbuffer = puglUtf8ToWideChar(buffer);
+			if (!wbuffer) {
+			    free(buffer); 
+			    return NULL;
+			}
+			if (GetClassInfoExW(GetModuleHandle(NULL), wbuffer, &wc)) {
 				// Already registered
 				i += 1;
 				snprintf(buffer + len, 10, "-%d", i);
@@ -134,9 +141,11 @@ puglWindowClassName(const char* className, const char* suffix)
 			}
 		}
 		if (i < 32000) {
-			return buffer;
+			free(buffer);
+			return wbuffer;
 		} else {
 			free(buffer);
+		        free(wbuffer);
 			return NULL;
 		}
 	} else {
@@ -159,31 +168,31 @@ puglInitWorldInternals2(PuglWorld* world)
 		return true;
 	}
 	{
-		char* buffer = puglWindowClassName(world->className, "-msg");
+		wchar_t* buffer = puglWindowClassName(world->className, "-msg");
 		if (!buffer) {
 			goto failed;
 		}
-		puglSetString(&impl->worldClassName, buffer);
-		free(buffer); 
+		if (impl->worldClassName) free(impl->worldClassName);
+		impl->worldClassName = buffer;
 	}
 	{
-		char* buffer = puglWindowClassName(world->className, NULL);
+		wchar_t* buffer = puglWindowClassName(world->className, NULL);
 		if (!buffer) {
 			goto failed;
 		}
-		puglSetString(&impl->windowClassName, buffer);
-		free(buffer); 
+		if (impl->windowClassName) free(impl->windowClassName);
+		impl->windowClassName = buffer;
 	}
 	{
-		char* buffer = puglWindowClassName(world->className, "-popup");
+		wchar_t* buffer = puglWindowClassName(world->className, "-popup");
 		if (!buffer) {
 			goto failed;
 		}
-		puglSetString(&impl->popupClassName, buffer);
-		free(buffer); 
+		if (impl->popupClassName) free(impl->popupClassName);
+		impl->popupClassName = buffer;
 	}
 	
-	WNDCLASSEX wc = { 0 };
+	WNDCLASSEXW wc = { 0 };
 	wc.cbSize        = sizeof(wc);
 	wc.style         = CS_OWNDC;
 	wc.lpfnWndProc   = worldWndProc;
@@ -192,29 +201,29 @@ puglInitWorldInternals2(PuglWorld* world)
 	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszClassName = impl->worldClassName;
-	if (RegisterClassEx(&wc) == 0) {
+	if (RegisterClassExW(&wc) == 0) {
 		goto failed;
 	}
 	wc.lpfnWndProc   = wndProc;
 	wc.lpszClassName = impl->windowClassName;
-	if (RegisterClassEx(&wc) == 0) {
-		UnregisterClass(impl->worldClassName, NULL);
+	if (RegisterClassExW(&wc) == 0) {
+		UnregisterClassW(impl->worldClassName, NULL);
 		goto failed;
 	}
 	wc.style |= 0x00020000 /* CS_DROPSHADOW */;
 	wc.lpszClassName = impl->popupClassName;
-	if (RegisterClassEx(&wc) == 0) {
-		UnregisterClass(impl->worldClassName, NULL);
-		UnregisterClass(impl->windowClassName, NULL);
+	if (RegisterClassExW(&wc) == 0) {
+		UnregisterClassW(impl->worldClassName, NULL);
+		UnregisterClassW(impl->windowClassName, NULL);
 		goto failed;
 	}
-	impl->pseudoWin = CreateWindowEx(0, impl->worldClassName, impl->worldClassName, 
+	impl->pseudoWin = CreateWindowExW(0, impl->worldClassName, impl->worldClassName, 
 	                                 0, 0, 0, 0, 0, 
 	                                 HWND_MESSAGE, NULL, NULL, NULL);
 	if (!impl->pseudoWin) {
-		UnregisterClass(impl->worldClassName, NULL);
-		UnregisterClass(impl->windowClassName, NULL);
-		UnregisterClass(impl->popupClassName, NULL);
+		UnregisterClassW(impl->worldClassName,  NULL);
+		UnregisterClassW(impl->windowClassName, NULL);
+		UnregisterClassW(impl->popupClassName,  NULL);
 		goto failed;
 	}
 	SetWindowLongPtr(impl->pseudoWin, GWLP_USERDATA, (LONG_PTR)world);
@@ -223,9 +232,18 @@ puglInitWorldInternals2(PuglWorld* world)
 	return true;
 
 failed:
-	puglFreeString(&impl->worldClassName);
-	puglFreeString(&impl->windowClassName);
-	puglFreeString(&impl->popupClassName);
+	if (impl->worldClassName)  {
+	    free(impl->worldClassName);
+	    impl->worldClassName = NULL;
+	}
+	if (impl->windowClassName) {
+	    free(impl->windowClassName);
+	    impl->windowClassName = NULL;
+	}
+	if (impl->popupClassName)  {
+	    free(impl->popupClassName);
+	    impl->popupClassName = NULL;
+	}
 	return false;
 }
 
@@ -364,17 +382,17 @@ void
 puglFreeWorldInternals(PuglWorld* world)
 {
 	if (world->impl->worldClassName) {
-		UnregisterClass(world->impl->worldClassName, NULL);
+		UnregisterClassW(world->impl->worldClassName, NULL);
 		free(world->impl->worldClassName);
 		world->impl->worldClassName = NULL;
 	}
 	if (world->impl->windowClassName) {
-		UnregisterClass(world->impl->windowClassName, NULL);
+		UnregisterClassW(world->impl->windowClassName, NULL);
 		free(world->impl->windowClassName);
 		world->impl->windowClassName = NULL;
 	}
 	if (world->impl->popupClassName) {
-		UnregisterClass(world->impl->popupClassName, NULL);
+		UnregisterClassW(world->impl->popupClassName, NULL);
 		free(world->impl->popupClassName);
 		world->impl->popupClassName = NULL;
 	}

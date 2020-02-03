@@ -27,13 +27,13 @@
 typedef PIXELFORMATDESCRIPTOR PuglWinPFD;
 
 struct PuglWorldInternalsImpl {
-	bool   initialized;
-	char*  worldClassName;
-	char*  windowClassName;
-	char*  popupClassName;
-	HWND   pseudoWin;
-	double timerFrequency;
-	double nextProcessTime;
+	bool      initialized;
+	wchar_t*  worldClassName;
+	wchar_t*  windowClassName;
+	wchar_t*  popupClassName;
+	HWND      pseudoWin;
+	double    timerFrequency;
+	double    nextProcessTime;
 };
 
 struct PuglInternalsImpl {
@@ -116,12 +116,12 @@ puglWinCreateWindow(const PuglView* const view,
                     HWND* const           hwnd,
                     HDC* const            hdc)
 {
-	const char*    className  = (const char*)view->world->impl->windowClassName;
+	const wchar_t* className  = view->world->impl->windowClassName;
 	const unsigned winFlags   = puglWinGetWindowFlags(view);
 	const unsigned winExFlags = puglWinGetWindowExFlags(view);
 	
 	if (view->hints[PUGL_IS_POPUP]) {
-	    className = (const char*)view->world->impl->popupClassName;
+	    className = view->world->impl->popupClassName;
 	}
 
 	// Calculate total window size to accommodate requested view size
@@ -135,29 +135,28 @@ puglWinCreateWindow(const PuglView* const view,
 	else if (view->transientParent) { parent = (HWND)view->transientParent; }
 	else                            { parent = HWND_DESKTOP; }
 	
-	wchar_t* classNameW = puglUtf8ToWideChar(className);
-	wchar_t* titleW     = puglUtf8ToWideChar(title);
+	wchar_t* titleW = puglUtf8ToWideChar(title);
 	
 	// Create window and get drawing context
-	if (!classNameW || !titleW) {
-	    free(classNameW); free(titleW);
+	if (!titleW) {
+	    free(titleW);
 	    return PUGL_FAILURE;
 	}
-	if (!(*hwnd = CreateWindowExW(winExFlags, classNameW, titleW, winFlags,
+	if (!(*hwnd = CreateWindowExW(winExFlags, className, titleW, winFlags,
 	                              CW_USEDEFAULT, CW_USEDEFAULT,
 	                              wr.right-wr.left, wr.bottom-wr.top,
 	                              parent,
 	                              NULL, NULL, NULL))) {
-		free(classNameW); free(titleW);
+		free(titleW);
 		return PUGL_CREATE_WINDOW_FAILED;
 	} else if (!(*hdc = GetDC(*hwnd))) {
 		DestroyWindow(*hwnd);
 		*hwnd = NULL;
-		free(classNameW); free(titleW);
+		free(titleW);
 		return PUGL_CREATE_WINDOW_FAILED;
 	}
 
-	free(classNameW); free(titleW);
+	free(titleW);
 	return PUGL_SUCCESS;
 }
 
