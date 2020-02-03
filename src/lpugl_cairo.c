@@ -395,11 +395,15 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo(lua_State* L)
 
     lua_newtable(L);                                        /* -> module, meta */
     if (lua_getglobal(L, "require") == LUA_TFUNCTION) {     /* -> module, meta, require */
-        lua_pushstring(L, "lpugl");                         /* -> module, meta, require, "lpugl" */
-        lua_call(L, 1, 1);                                  /* -> module, meta, lpugl */
-        lua_setfield(L, -2, "__index");                     /* -> module, meta */
-        lua_pushliteral(L, "lpugl.cairo");                  /* -> module, meta, string */
-        lua_setfield(L, -2, "__metatable");                 /* -> module, meta */
+        lua_pushvalue(L, -1);                               /* -> module, meta, require, require */
+        lua_pushstring(L, "lpugl");                         /* -> module, meta, require, require, "lpugl" */
+        lua_call(L, 1, 1);                                  /* -> module, meta, require, lpugl */
+        lua_setfield(L, -3, "__index");                     /* -> module, meta, require */
+        lua_pushliteral(L, "lpugl.cairo");                  /* -> module, meta, require, "lpugl.cairo" */
+        lua_setfield(L, -3, "__metatable");                 /* -> module, meta, require */
+        // assure that oocairo is loaded before loading of lpugl.cairo finishes
+        lua_pushstring(L, "oocairo");                       /* -> module, meta, require, "oocairo" */
+        lua_call(L, 1, 0);                                  /* -> module, meta */
         lua_setmetatable(L, module);                        /* -> module */
         return 1;
     } else {
