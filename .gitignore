@@ -1,5 +1,4 @@
 *.so
-*.so.dSYM
 *.dll
 *.o
 /pugl-repo/.clang-tidy
