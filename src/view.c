@@ -592,15 +592,26 @@ static void closeView(lua_State* L, ViewUserData* udata, int udataIdx)
     }
     if (world) {
         if (world->weakWorldRef != LUA_REFNIL) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef); /* -> weakWorld */
-            lua_pushnil(L);                                         /* -> weakWorld, nil */
-            lua_rawsetp(L, -2, udata);                              /* -> weakWorld */
-            lua_rawgeti(L, -1, 0);                                  /* -> weakWorld, world */
-            lua_getuservalue(L, -1);                                /* -> weakWorld, world, worldUservalue */
-            lua_rawgeti(L, -1, LPUGL_WORLD_UV_VIEWS);               /* -> weakWorld, world, worldUservalue, viewLookup */
-            lua_pushnil(L);                                         /* -> weakWorld, world, worldUservalue, viewLookup, nil */
-            lua_rawsetp(L, -2, udata);                              /* -> weakWorld, world, worldUservalue, viewLookup */
-            lua_pop(L, 4);                                          /* -> */
+            if (lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef) 
+                                                    == LUA_TTABLE) {    /* -> weakWorld */
+                lua_pushnil(L);                                         /* -> weakWorld, nil */
+                lua_rawsetp(L, -2, udata);                              /* -> weakWorld */
+                
+                if (lua_rawgeti(L, -1, 0) == LUA_TUSERDATA) {           /* -> weakWorld, world */
+                    if (lua_getuservalue(L, -1) == LUA_TTABLE) {        /* -> weakWorld, world, worldUservalue */
+                        lua_rawgeti(L, -1, LPUGL_WORLD_UV_VIEWS);       /* -> weakWorld, world, worldUservalue, viewLookup */
+                        lua_pushnil(L);                                 /* -> weakWorld, world, worldUservalue, viewLookup, nil */
+                        lua_rawsetp(L, -2, udata);                      /* -> weakWorld, world, worldUservalue, viewLookup */
+                        lua_pop(L, 4);                                  /* -> */
+                    } else {                                            /* -> ? */
+                        lua_pop(L, 1);                                  /* -> */
+                    }
+                } else {                                                /* -> ? */
+                    lua_pop(L, 1);                                      /* -> */
+                }
+            } else {                                                    /* -> ? */
+                lua_pop(L, 1);                                          /* -> */
+            }
         }
     }
 }
