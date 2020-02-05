@@ -5,6 +5,9 @@
 LPugl is a minimal Lua-API for building GUIs. It is based on [Pugl], a minimal
 portable API for embeddable GUIs.
 
+LPugl provides only a very minimal API. See [lwtk] (*Lua Widget Toolkit*)
+for implementing GUI widgets on top of LPugl.
+
 #### Supported platforms: 
    * X11
    * Windows
@@ -70,9 +73,10 @@ application and also in the same window by embedding different view objects.
     end
     ```
 
+[Pugl]:                     https://drobilla.net/software/pugl
+[OOCairo]:                  https://luarocks.org/modules/osch/oocairo
+[lwtk]:                     https://github.com/osch/lua-lwtk#lwtk---lua-widget-toolkit
 [lpugl]:                    https://luarocks.org/modules/osch/lpugl
 [lpugl.cairo]:              https://luarocks.org/modules/osch/lpugl.cairo
 [lpugl.opengl]:             https://luarocks.org/modules/osch/lpugl.opengl
-[Pugl]:                     https://drobilla.net/software/pugl
-[OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 
