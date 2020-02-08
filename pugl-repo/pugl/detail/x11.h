@@ -25,6 +25,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#include <stdbool.h>
+
 typedef struct {
 	Atom CLIPBOARD;
 	Atom TARGETS;
@@ -53,6 +55,7 @@ struct PuglWorldInternalsImpl {
 	double       nextProcessTime;
 	bool         needsProcessing;
 	int          awake_fds[2];
+	bool         dispatchingEvents;
 };
 
 struct PuglInternalsImpl {

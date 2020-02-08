@@ -657,25 +657,26 @@ handleConfigure(PuglView* view, PuglEvent* event)
 	                view->parent ? (HWND)view->parent : HWND_DESKTOP,
 	                (LPPOINT)&rect,
 	                2);
-	double oldWidth  = view->frame.width;
-	double oldHeight = view->frame.height;
-	
-	view->frame.x      = rect.left;
-	view->frame.y      = rect.top;
-	view->frame.width  = rect.right - rect.left;
-	view->frame.height = rect.bottom - rect.top;
+
+	const LONG width  = rect.right - rect.left;
+	const LONG height = rect.bottom - rect.top;
+
+	view->frame.x = rect.left;
+	view->frame.y = rect.top;
 
 	event->configure.type   = PUGL_CONFIGURE;
 	event->configure.x      = view->frame.x;
 	event->configure.y      = view->frame.y;
-	event->configure.width  = view->frame.width;
-	event->configure.height = view->frame.height;
+	event->configure.width  = width;
+	event->configure.height = height;
 
-	if (oldWidth != view->frame.width || oldHeight != view->frame.height) {
-		view->backend->resize(view,
-		                      view->frame.width,
-		                      view->frame.height);
+	if (view->frame.width != width || view->frame.height != height) {
+		view->frame.width  = width;
+		view->frame.height = height;
+
+		view->backend->resize(view, width, height);
 	}
+
 	return rect;
 }
 

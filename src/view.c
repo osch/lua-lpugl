@@ -850,12 +850,28 @@ static int View_postRedisplayRect(lua_State* L)
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
     
-    PuglRect rect;
-    rect.x      = floor(luaL_checknumber(L, 2));
-    rect.y      = floor(luaL_checknumber(L, 3));
-    rect.width  = floor(luaL_checknumber(L, 4) + 0.5);
-    rect.height = floor(luaL_checknumber(L, 5) + 0.5);
-    puglPostRedisplayRect(udata->puglView, rect);
+    lua_Number arg_x = luaL_checknumber(L, 2);
+    lua_Number arg_y = luaL_checknumber(L, 3);
+    lua_Number arg_w = luaL_checknumber(L, 4);
+    lua_Number arg_h = luaL_checknumber(L, 5);
+    
+    int x  = (int)floor(arg_x);
+    int y  = (int)floor(arg_y);
+    int w  = (int)ceil(arg_x + arg_w) - x;
+    int h  = (int)ceil(arg_y + arg_h) - y;
+   
+    if (x < 0)  { w += x; x = 0; }
+    if (y < 0)  { h += y; y = 0; }
+
+    if (w > 0 && h > 0) {
+        PuglRect rect;
+        rect.x      = x;
+        rect.y      = y;
+        rect.width  = w;
+        rect.height = h;
+
+        puglPostRedisplayRect(udata->puglView, rect);
+    }
     
     return 0;
 }

@@ -1,4 +1,7 @@
-This is a modified copy of Pugl, see also:
+This is a modified copy of Pugl for [LPugl](https://github.com/osch/lua-lpugl), 
+a Lua-API based on Pugl.
+
+For original Pugl see:
    * https://drobilla.net/software/pugl
    * https://gitlab.com/lv2/pugl
    * https://github.com/drobilla/pugl
