@@ -1006,17 +1006,22 @@ puglShowWindow(PuglView* view)
 	if (window) {
             if (!view->impl->displayed) {
                 view->impl->displayed = true;
-                if (view->transientParent && view->hints[PUGL_IS_POPUP]) {
-                    if (!view->impl->posRequested) {
-                        NSRect parentFrame = [[(id)view->transientParent window] frame];
-                        NSRect frame;
-                        frame.origin = parentFrame.origin;
-                        frame.size = NSMakeSize(view->frame.width, view->frame.height);
-                        [window setFrame: frame display:NO];
+                if (view->transientParent) {
+                    NSWindow* parentWindow = [(id)view->transientParent window];
+                    if (parentWindow) {
+                        if (!view->impl->posRequested) {
+                            // center to parent, otherwise if will appear at top left screen corner
+                            NSRect parentFrame = [parentWindow frame];
+                            NSRect frame = [window frame];
+                            frame.origin.x = parentFrame.origin.x + parentFrame.size.width/2  - frame.size.width/2;
+                            frame.origin.y = parentFrame.origin.y + parentFrame.size.height/2 - frame.size.height/2;
+                            [window setFrame: frame display:NO];
+                        }
+                        [parentWindow addChildWindow:window ordered:NSWindowAbove];
                     }
-                    [[(id)view->transientParent window] addChildWindow:window ordered:NSWindowAbove];
                 } else {
                     if (!view->impl->posRequested) {
+                        // center to screen, otherwise if will appear at top left screen corner
                         [window center];
                     }
                 }
@@ -1375,7 +1380,6 @@ puglSetAspectRatio(PuglView* const view,
 PuglStatus
 puglSetTransientFor(PuglView* view, PuglNativeWindow parent)
 {
-	// not supported for mac
 	view->transientParent = parent;
 	return PUGL_SUCCESS;
 }
