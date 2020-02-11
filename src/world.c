@@ -523,9 +523,6 @@ static int World_newView(lua_State* L)
     }
     lpugl_view_new(L, udata->world, initArg, viewLookup);
     
-    // Workaround for Gnome Desktop 3.28.2:
-    puglDispatchEvents(udata->world->puglWorld);
-
     return 1;
 }
 

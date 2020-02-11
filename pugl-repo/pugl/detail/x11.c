@@ -207,7 +207,7 @@ puglPollEvents(PuglWorld* world, const double timeout0)
 	    hasEvents = true;
 	    impl->needsProcessing = true;
 	    char buf[32];
-	    read(afd, buf, sizeof(buf));
+	    int ignore = read(afd, buf, sizeof(buf));
 	}
 	if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)) {
 	    hasEvents = true;
@@ -374,18 +374,43 @@ puglCreateWindow(PuglView* view, const char* title)
 PuglStatus
 puglShowWindow(PuglView* view)
 {
-	XMapRaised(view->impl->display, view->impl->win);
-
+	Display* display = view->impl->display;
+	XMapRaised(display, view->impl->win);
+        
 	if (!view->impl->displayed) {
 	    view->impl->displayed = true;
-	    if (view->impl->posRequested) {
-                // Workaround for KDE Desktop
-                XMoveResizeWindow(view->impl->display, view->impl->win,
+	    if (view->impl->posRequested && view->transientParent) {
+	        // Position popups and transients to desired position.
+	        // Additional XMoveResizeWindow after XMapRaised was
+	        // at least necessary for KDE desktop.
+                XMoveResizeWindow(display, view->impl->win,
                                   view->reqX,     view->reqY, 
                                   view->reqWidth, view->reqHeight);
             }
+            else if (view->transientParent && view->hints[PUGL_IS_POPUP]) {
+		// center popup to parent, otherwise it will appear at top left screen corner
+		// (may depend on window manager), usually you shoud have requested 
+		// a position for popups.
+		XWindowAttributes attrs;
+                if (XGetWindowAttributes(display, view->transientParent, &attrs)) {
+                    int parentX;
+                    int parentY;
+                    int parentW = attrs.width;
+                    int parentH = attrs.height;
+                    Window ignore;
+                    XTranslateCoordinates(display, view->transientParent,
+                                                   RootWindow(display, view->impl->screen),
+                                                   0, 0,
+                                                   &parentX, &parentY, &ignore);
+                    view->reqX = parentX + parentW/2 - view->reqWidth/2;
+                    view->reqY = parentY + parentH/2 - view->reqHeight/2;
+                    XMoveResizeWindow(display, view->impl->win,
+                                      view->reqX,     view->reqY, 
+                                      view->reqWidth, view->reqHeight);
+                }
+            }
+	    view->impl->posRequested = false;
 	}
-	puglPostRedisplay(view);
 	return PUGL_SUCCESS;
 }
 
@@ -393,6 +418,8 @@ PuglStatus
 puglHideWindow(PuglView* view)
 {
 	XUnmapWindow(view->impl->display, view->impl->win);
+	view->impl->displayed = false;
+
 	return PUGL_SUCCESS;
 }
 
@@ -829,19 +856,8 @@ flushPendingConfigure(PuglView* view)
 	PuglEvent* const configure = &view->impl->pendingConfigure;
 
 	if (configure->type) {
-		Display* display = view->impl->display;
- 		Window xParent = view->parent ? (Window)view->parent
-		                              : RootWindow(display, view->impl->screen);
-	        int x = 0, y = 0;
-	        Window child;
-		XTranslateCoordinates(display, view->impl->win,
-		                               xParent,
-	                                       0, 0,
-	                                       &x, &y, &child);
-		configure->configure.x = x;
-		configure->configure.y = y;
-		view->frame.x      = configure->configure.x;
-		view->frame.y      = configure->configure.y;
+		view->frame.x = configure->configure.x;
+		view->frame.y = configure->configure.y;
 
 		if (configure->configure.width != view->frame.width ||
 		    configure->configure.height != view->frame.height) {
@@ -863,7 +879,7 @@ puglAwake(PuglWorld* world)
 {
 	if (world->impl->awake_fds[0] >= 0) {
 		char c = 0;
-		write(world->impl->awake_fds[1], &c, 1);
+		int ignore = write(world->impl->awake_fds[1], &c, 1);
 	}
 }
 
@@ -884,6 +900,7 @@ puglDispatchEvents(PuglWorld* world)
 	Display* display = world->impl->display;
 	XFlush(display);
 
+        bool wasDispatchingEvents = world->impl->dispatchingEvents;
 	world->impl->dispatchingEvents = true;
 
 	// Process all queued events (locally, without flushing or reading)
@@ -963,29 +980,30 @@ puglDispatchEvents(PuglWorld* world)
 		}
 	}
 
-	// Flush pending configure and expose events for all views
-	for (size_t i = 0; i < world->numViews; ++i) {
-		PuglView* const  view      = world->views[i];
-		PuglEvent* const configure = &view->impl->pendingConfigure;
-		PuglEvent* const expose    = &view->impl->pendingExpose;
-
-		if (configure->type || expose->type) {
-			const bool mustExpose = expose->type && expose->expose.count == 0;
-			puglEnterContext(view, mustExpose);
-
-			flushPendingConfigure(view);
-
-			if (mustExpose) {
-				view->eventFunc(view, &view->impl->pendingExpose);
+	if (!wasDispatchingEvents) {
+		// Flush pending configure and expose events for all views
+		for (size_t i = 0; i < world->numViews; ++i) {
+			PuglView* const  view      = world->views[i];
+			PuglEvent* const configure = &view->impl->pendingConfigure;
+			PuglEvent* const expose    = &view->impl->pendingExpose;
+	
+			if (configure->type || expose->type) {
+				const bool mustExpose = expose->type && expose->expose.count == 0;
+				puglEnterContext(view, mustExpose);
+	
+				flushPendingConfigure(view);
+	
+				if (mustExpose) {
+					view->eventFunc(view, &view->impl->pendingExpose);
+				}
+	
+				puglLeaveContext(view, mustExpose);
+				configure->type = 0;
+				expose->type    = 0;
 			}
-
-			puglLeaveContext(view, mustExpose);
-			configure->type = 0;
-			expose->type    = 0;
 		}
+		world->impl->dispatchingEvents = wasDispatchingEvents;
 	}
-
-	world->impl->dispatchingEvents = false;
 
 	return PUGL_SUCCESS;
 }
