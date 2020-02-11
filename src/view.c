@@ -431,6 +431,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     bool hasTransient = false;
     bool hasPopup = false;
     bool hasParent = false;
+    bool isResizable =  false;
     {
         lua_pushnil(L);                 /* -> udata, nil */
         while (lua_next(L, initArg)) {  /* -> udata, key, value */
@@ -452,7 +453,8 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
             }
             else if (checkArgTableValueType(L, initArg, key, "resizable", LUA_TBOOLEAN))
             {
-                puglSetViewHint(udata->puglView, PUGL_RESIZABLE, lua_toboolean(L, -1));
+                isResizable = lua_toboolean(L, -1);
+                puglSetViewHint(udata->puglView, PUGL_RESIZABLE, isResizable);
             }
             else if (checkArgTableValueUdata(L, initArg, key, "transientFor", LPUGL_VIEW_CLASS_NAME)
                   || checkArgTableValueUdata(L, initArg, key, "popupFor",     LPUGL_VIEW_CLASS_NAME)
@@ -533,6 +535,14 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
             }
             lua_pop(L, 1);              /* -> udata, key */
         }                               /* -> udata */
+    }
+    if (isResizable) {
+        if (hasPopup) {
+            return luaL_argerror(L, initArg, "Resizable attribute not allowed for popup views");
+        }
+        else if (hasParent) {
+            return luaL_argerror(L, initArg, "Resizable attribute not allowed for child views");
+        }
     }
     if (!backend) {
         return luaL_argerror(L, initArg, "missing backend parameter and no default backend available");
