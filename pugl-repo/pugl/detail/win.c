@@ -804,11 +804,17 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		view->impl->resizing = false;
 //		puglPostRedisplay(view);
 		break;
-	case WM_GETMINMAXINFO:
+	case WM_GETMINMAXINFO: {
+	        RECT rcClient, rcWind;
+	        GetClientRect(view->impl->hwnd, &rcClient);
+	        GetWindowRect(view->impl->hwnd, &rcWind);
+	        int dx = (rcWind.right - rcWind.left) - rcClient.right;
+	        int dy = (rcWind.bottom - rcWind.top) - rcClient.bottom;
 		mmi                   = (MINMAXINFO*)lParam;
-		mmi->ptMinTrackSize.x = view->minWidth;
-		mmi->ptMinTrackSize.y = view->minHeight;
+		mmi->ptMinTrackSize.x = view->minWidth  + dx;
+		mmi->ptMinTrackSize.y = view->minHeight + dy;
 		break;
+	}
 	case WM_PAINT:
 		GetUpdateRect(view->impl->hwnd, &rect, false);
 		event.expose.type   = PUGL_EXPOSE;
