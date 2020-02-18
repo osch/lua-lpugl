@@ -792,8 +792,8 @@ static int View_setSize(lua_State* L)
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
     
-    int w = luaL_checkinteger(L, 2);
-    int h = luaL_checkinteger(L, 3);
+    int w = floor(luaL_checknumber(L, 2) + 0.5);
+    int h = floor(luaL_checknumber(L, 3) + 0.5);
     
     puglSetSize(udata->puglView, w, h);
     
@@ -827,8 +827,8 @@ static int View_setMinSize(lua_State* L)
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
     
-    int w = luaL_checkinteger(L, 2);
-    int h = luaL_checkinteger(L, 3);
+    int w = floor(luaL_checknumber(L, 2) + 0.5);
+    int h = floor(luaL_checknumber(L, 3) + 0.5);
     
     puglSetMinSize(udata->puglView, w, h);
     
