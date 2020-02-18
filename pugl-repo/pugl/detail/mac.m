@@ -88,11 +88,13 @@ rescheduleProcessTimer(PuglWorld* world)
     releaseProcessTimer(impl);
     if (impl->nextProcessTime >= 0) {
         impl->processTimer =
-                [[NSTimer scheduledTimerWithTimeInterval:impl->nextProcessTime - puglGetTime(world)
-                                                  target:world->impl->worldProxy
-                                                selector:@selector(processTimerCallback)
-                                                userInfo:nil
-                                                 repeats:NO] retain];
+                [[NSTimer timerWithTimeInterval:impl->nextProcessTime - puglGetTime(world)
+                                         target:world->impl->worldProxy
+                                       selector:@selector(processTimerCallback)
+                                       userInfo:nil
+                                        repeats:NO] retain];
+        [[NSRunLoop currentRunLoop] addTimer:impl->processTimer 
+                                     forMode:NSRunLoopCommonModes];
     }
 
 }
