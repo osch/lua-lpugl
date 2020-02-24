@@ -813,6 +813,12 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		mmi                   = (MINMAXINFO*)lParam;
 		mmi->ptMinTrackSize.x = view->minWidth  + dx;
 		mmi->ptMinTrackSize.y = view->minHeight + dy;
+		if (view->maxWidth > 0) {
+		    mmi->ptMaxTrackSize.x = view->maxWidth + dx;
+		}
+		if (view->maxHeight > 0) {
+		    mmi->ptMaxTrackSize.y = view->maxHeight + dy;
+		}
 		break;
 	}
 	case WM_PAINT:
@@ -1216,6 +1222,14 @@ puglSetMinSize(PuglView* const view, const int width, const int height)
 {
 	view->minWidth  = width;
 	view->minHeight = height;
+	return PUGL_SUCCESS;
+}
+
+PuglStatus
+puglSetMaxSize(PuglView* const view, const int width, const int height)
+{
+	view->maxWidth  = width;
+	view->maxHeight = height;
 	return PUGL_SUCCESS;
 }
 

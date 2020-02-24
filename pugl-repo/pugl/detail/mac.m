@@ -1360,6 +1360,22 @@ puglSetMinSize(PuglView* const view, const int width, const int height)
 }
 
 PuglStatus
+puglSetMaxSize(PuglView* const view, const int width, const int height)
+{
+	view->maxWidth  = width;
+	view->maxHeight = height;
+
+	if (view->impl->window && (view->maxWidth || view->maxHeight)) {
+		CGFloat mw = width;  if (width < 0)  { mw = CGFLOAT_MAX; }
+		CGFloat mh = height; if (height < 0) { mh = CGFLOAT_MAX; }
+		[view->impl->window
+		    setContentMaxSize:NSMakeSize(mw, mh)];
+	}
+
+	return PUGL_SUCCESS;
+}
+
+PuglStatus
 puglSetAspectRatio(PuglView* const view,
                    const int       minX,
                    const int       minY,

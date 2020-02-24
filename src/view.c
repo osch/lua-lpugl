@@ -837,6 +837,24 @@ static int View_setMinSize(lua_State* L)
 
 /* ============================================================================================ */
 
+static int View_setMaxSize(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    
+    int w = floor(luaL_checknumber(L, 2) + 0.5);
+    int h = floor(luaL_checknumber(L, 3) + 0.5);
+    
+    puglSetMaxSize(udata->puglView, w, h);
+    
+    return 0;
+}
+
+/* ============================================================================================ */
+
 static int View_getFrame(lua_State* L)
 {
     ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
@@ -972,6 +990,7 @@ static const luaL_Reg ViewMethods[] =
     { "setSize",            View_setSize         },
     { "getSize",            View_getSize         },
     { "setMinSize",         View_setMinSize      },
+    { "setMaxSize",         View_setMaxSize      },
     { "setTitle",           View_setTitle        },
     { "getBackend",         View_getBackend      },
     { "postRedisplay",      View_postRedisplay   },

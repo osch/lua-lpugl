@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
 #define KEYSYM2UCS_INCLUDED
 #include "x11_keysym2ucs.c"
@@ -229,29 +230,37 @@ puglFindView(PuglWorld* world, const Window window)
 	return NULL;
 }
 
-static XSizeHints
+static XSizeHints*
 getSizeHints(const PuglView* view)
 {
-	XSizeHints sizeHints = {0};
+	XSizeHints* sizeHints = XAllocSizeHints();
+	
 
 	if (!view->hints[PUGL_RESIZABLE]) {
-		sizeHints.flags      = PMinSize|PMaxSize;
-		sizeHints.min_width  = (int)view->reqWidth;
-		sizeHints.min_height = (int)view->reqHeight;
-		sizeHints.max_width  = (int)view->reqWidth;
-		sizeHints.max_height = (int)view->reqHeight;
+		sizeHints->flags      = PMinSize|PMaxSize;
+		sizeHints->min_width  = (int)view->reqWidth;
+		sizeHints->min_height = (int)view->reqHeight;
+		sizeHints->max_width  = (int)view->reqWidth;
+		sizeHints->max_height = (int)view->reqHeight;
 	} else {
 		if (view->minWidth || view->minHeight) {
-			sizeHints.flags      = PMinSize;
-			sizeHints.min_width  = view->minWidth;
-			sizeHints.min_height = view->minHeight;
+			sizeHints->flags      = PMinSize;
+			sizeHints->min_width  = view->minWidth;
+			sizeHints->min_height = view->minHeight;
+		}
+		if (view->maxWidth || view->maxHeight) {
+			sizeHints->flags      |= PMaxSize;
+			sizeHints->max_width  = view->maxWidth;
+			sizeHints->max_height = view->maxHeight;
+			if (sizeHints->max_width  < 0) { sizeHints->max_width  = INT_MAX; }
+			if (sizeHints->max_height < 0) { sizeHints->max_height = INT_MAX; }
 		}
 		if (view->minAspectX) {
-			sizeHints.flags        |= PAspect;
-			sizeHints.min_aspect.x  = view->minAspectX;
-			sizeHints.min_aspect.y  = view->minAspectY;
-			sizeHints.max_aspect.x  = view->maxAspectX;
-			sizeHints.max_aspect.y  = view->maxAspectY;
+			sizeHints->flags        |= PAspect;
+			sizeHints->min_aspect.x  = view->minAspectX;
+			sizeHints->min_aspect.y  = view->minAspectY;
+			sizeHints->max_aspect.x  = view->maxAspectX;
+			sizeHints->max_aspect.y  = view->maxAspectY;
 		}
 	}
 
@@ -340,8 +349,9 @@ puglCreateWindow(PuglView* view, const char* title)
 		return st;
 	}
 
-	XSizeHints sizeHints = getSizeHints(view);
-	XSetNormalHints(display, win, &sizeHints);
+	XSizeHints* sizeHints = getSizeHints(view);
+	XSetNormalHints(display, win, sizeHints);
+	XFree(sizeHints);
 
 	XClassHint classHint = { world->className, world->className };
 	XSetClassHint(display, win, &classHint);
@@ -1091,8 +1101,9 @@ puglSetFrame(PuglView* view, const PuglRect frame)
         view->impl->posRequested = true;
         
 	if (view->impl->win) {
-	    XSizeHints sizeHints = getSizeHints(view);
-	    XSetNormalHints(view->world->impl->display, view->impl->win, &sizeHints);
+	    XSizeHints* sizeHints = getSizeHints(view);
+	    XSetNormalHints(view->world->impl->display, view->impl->win, sizeHints);
+	    XFree(sizeHints);
 	    XMoveResizeWindow(view->world->impl->display, view->impl->win,
 	                      (int)frame.x, (int)frame.y,
 	                      (int)frame.width, (int)frame.height);
@@ -1108,8 +1119,9 @@ puglSetSize(PuglView* view, int width, int height)
 	view->reqHeight = height;
 	
 	if (view->impl->win) {
-	    XSizeHints sizeHints = getSizeHints(view);
-	    XSetNormalHints(view->world->impl->display, view->impl->win, &sizeHints);
+	    XSizeHints* sizeHints = getSizeHints(view);
+	    XSetNormalHints(view->world->impl->display, view->impl->win, sizeHints);
+	    XFree(sizeHints);
 	    XResizeWindow(view->world->impl->display, view->impl->win, width, height);
 	}
 
@@ -1125,8 +1137,26 @@ puglSetMinSize(PuglView* const view, const int width, const int height)
 	view->minHeight = height;
 
 	if (view->impl->win) {
-		XSizeHints sizeHints = getSizeHints(view);
-		XSetNormalHints(display, view->impl->win, &sizeHints);
+		XSizeHints* sizeHints = getSizeHints(view);
+		XSetNormalHints(display, view->impl->win, sizeHints);
+		XFree(sizeHints);
+	}
+
+	return PUGL_SUCCESS;
+}
+
+PuglStatus
+puglSetMaxSize(PuglView* const view, const int width, const int height)
+{
+	Display* display = view->world->impl->display;
+
+	view->maxWidth  = width;
+	view->maxHeight = height;
+
+	if (view->impl->win) {
+		XSizeHints* sizeHints = getSizeHints(view);
+		XSetNormalHints(display, view->impl->win, sizeHints);
+		XFree(sizeHints);
 	}
 
 	return PUGL_SUCCESS;
@@ -1147,8 +1177,9 @@ puglSetAspectRatio(PuglView* const view,
 	view->maxAspectY = maxY;
 
 	if (view->impl->win) {
-		XSizeHints sizeHints = getSizeHints(view);
-		XSetNormalHints(display, view->impl->win, &sizeHints);
+		XSizeHints* sizeHints = getSizeHints(view);
+		XSetNormalHints(display, view->impl->win, sizeHints);
+		XFree(sizeHints);
 	}
 
 	return PUGL_SUCCESS;

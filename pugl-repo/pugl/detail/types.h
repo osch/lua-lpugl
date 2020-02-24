@@ -70,6 +70,8 @@ struct PuglViewImpl {
 	int                reqHeight;
 	int                minWidth;
 	int                minHeight;
+	int                maxWidth;
+	int                maxHeight;
 	int                minAspectX;
 	int                minAspectY;
 	int                maxAspectX;

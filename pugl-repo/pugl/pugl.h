@@ -713,6 +713,9 @@ puglSetSize(PuglView* view, int width, int height);
 PUGL_API PuglStatus
 puglSetMinSize(PuglView* view, int width, int height);
 
+PUGL_API PuglStatus
+puglSetMaxSize(PuglView* view, int width, int height);
+
 /**
    Set the window aspect ratio range.
 
