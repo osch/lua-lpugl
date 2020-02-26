@@ -49,11 +49,11 @@
 #define PUGL_LOCAL_CLOSE_MSG  (WM_USER + 50)
 #define PUGL_LOCAL_MARK_MSG   (WM_USER + 51)
 #define PUGL_LOCAL_AWAKE_MSG  (WM_USER + 52)
-#define PUGL_LOCAL_CLIPBD_MSG (WM_USER + 53)
+#define PUGL_LOCAL_TIMER_MSG  (WM_USER + 53)
+#define PUGL_LOCAL_CLIPBD_MSG (WM_USER + 54)
 
 #define PUGL_RESIZE_TIMER_ID  9461
 #define PUGL_URGENT_TIMER_ID  9462
-#define PUGL_PROCESS_TIMER_ID 9463
 
 typedef BOOL (WINAPI *PFN_SetProcessDPIAware)(void);
 
@@ -387,6 +387,9 @@ puglFreeViewInternals(PuglView* view)
 void
 puglFreeWorldInternals(PuglWorld* world)
 {
+	if (world->impl->processTimer) {
+	    DeleteTimerQueueTimer(NULL, world->impl->processTimer, NULL);
+	}
 	if (world->impl->worldClassName) {
 		UnregisterClassW(world->impl->worldClassName, NULL);
 		free(world->impl->worldClassName);
@@ -406,6 +409,7 @@ puglFreeWorldInternals(PuglWorld* world)
 		SetWindowLongPtr(world->impl->pseudoWin, GWLP_USERDATA, (LONG_PTR)NULL);
 		DestroyWindow(world->impl->pseudoWin);
 	}
+
 	free(world->impl);
 }
 
@@ -1040,23 +1044,47 @@ puglSetProcessFunc(PuglWorld* world, PuglProcessFunc processFunc, void* userData
 	world->processUserData = userData;
 }
 
+
+static void 
+processTimerCallback(PVOID   lpParameter,
+                     BOOLEAN TimerOrWaitFired)
+{
+        PuglWorld* world = (PuglWorld*)lpParameter;
+        if (world->impl->pseudoWin) {
+            PostMessage(world->impl->pseudoWin, PUGL_LOCAL_TIMER_MSG, 0, 0);
+        }
+}
+
+
+static void
+deleteProcessTimer(PuglWorld* world) 
+{
+        if (world->impl->processTimer) {
+            DeleteTimerQueueTimer(NULL, world->impl->processTimer, NULL);
+            world->impl->processTimer = 0;
+        }
+}
+
 void
 puglSetNextProcessTime(PuglWorld* world, double seconds)
 {
-	if (!world->impl->initialized && !puglInitWorldInternals2(world)) {
-		return;
-	}
-	if (seconds >= 0) {
-		world->impl->nextProcessTime = puglGetTime(world) + seconds;
-		SetTimer(world->impl->pseudoWin,
-			 PUGL_PROCESS_TIMER_ID,
-			 (UINT)(seconds * 1000),
-			 NULL);
-	} else {
-		world->impl->nextProcessTime = -1;
-		KillTimer(world->impl->pseudoWin, 
-		          PUGL_PROCESS_TIMER_ID);
-	}
+        if (!world->impl->initialized && !puglInitWorldInternals2(world)) {
+                return;
+        }
+        if (seconds >= 0) {
+                deleteProcessTimer(world);
+                world->impl->nextProcessTime = puglGetTime(world) + seconds;
+                CreateTimerQueueTimer(&world->impl->processTimer,
+                                      NULL,
+                                      processTimerCallback,
+                                      world, 
+                                      (DWORD)(seconds * 1000),
+                                      0,
+                                      WT_EXECUTEINTIMERTHREAD);
+        } else {
+                world->impl->nextProcessTime = -1;
+                deleteProcessTimer(world);
+        }
 }
 
 PuglStatus
@@ -1106,24 +1134,27 @@ worldWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PuglWorld* world = (PuglWorld*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
 	switch (message) {
-	case WM_TIMER:
-		if (  world && hwnd == world->impl->pseudoWin
-		   && wParam == PUGL_PROCESS_TIMER_ID) 
+	case PUGL_LOCAL_TIMER_MSG:
+		if (world && hwnd == world->impl->pseudoWin)
 		{
 		    PuglWorldInternals* impl = world->impl;
 		    double current = puglGetTime(world);
 		    if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= current) {
 		        impl->nextProcessTime = -1;
-		        KillTimer(impl->pseudoWin, PUGL_PROCESS_TIMER_ID);
+                        deleteProcessTimer(world);
 		        if (world->processFunc) world->processFunc(world, world->processUserData);
 		    } else if (impl->nextProcessTime >= 0) {
 		        double seconds = impl->nextProcessTime - current;
-		        SetTimer(world->impl->pseudoWin,
-		                 PUGL_PROCESS_TIMER_ID,
-		                 (UINT)(seconds * 1000),
-		                 NULL);
+		        deleteProcessTimer(world);
+                        CreateTimerQueueTimer(&world->impl->processTimer,
+                                              NULL,
+                                              processTimerCallback,
+                                              world, 
+                                              (DWORD)(seconds * 1000),
+                                              0,
+                                              WT_EXECUTEINTIMERTHREAD);
 		    } else {
-		        KillTimer(impl->pseudoWin, PUGL_PROCESS_TIMER_ID);
+		        deleteProcessTimer(world);
 		    }
 		}
 		break;

@@ -34,6 +34,7 @@ struct PuglWorldInternalsImpl {
 	HWND      pseudoWin;
 	double    timerFrequency;
 	double    nextProcessTime;
+	HANDLE    processTimer;
 };
 
 struct PuglInternalsImpl {
