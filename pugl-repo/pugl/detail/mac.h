@@ -41,7 +41,7 @@
 	PuglEventKey*              processingKeyEvent;
 }
 
-- (void) dispatchExpose:(NSRect)rect;
+- (void) dispatchExpose:(NSRect)rect count:(int)c;
 - (void) setReshaped;
 - (void) clipboardReceived;
 

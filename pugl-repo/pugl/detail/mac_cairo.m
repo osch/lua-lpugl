@@ -57,7 +57,18 @@
 - (void) drawRect:(NSRect)rect
 {
 	PuglWrapperView* wrapper = (PuglWrapperView*)[self superview];
-	[wrapper dispatchExpose:rect];
+	const NSRect* rects = NULL;
+	NSInteger rectCount = 0;
+	if (puglview->hints[PUGL_DONT_MERGE_RECTS]) {
+	    [self getRectsBeingDrawn:&rects count:&rectCount];
+	}
+	if (rects != NULL && rectCount > 0) {
+	    for (int i = 0; i < rectCount; ++i) {
+	        [wrapper dispatchExpose:rects[i] count:rectCount - i - 1];
+	    }
+	} else {
+	    [wrapper dispatchExpose:rect count:0];
+	}
 }
 
 - (BOOL) isFlipped
@@ -118,10 +129,10 @@ puglMacCairoDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglMacCairoEnter(PuglView* view, bool drawing)
+puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
-	if (!drawing) {
+	if (!expose) {
 		return PUGL_SUCCESS;
 	}
 
@@ -139,10 +150,10 @@ puglMacCairoEnter(PuglView* view, bool drawing)
 }
 
 static PuglStatus
-puglMacCairoLeave(PuglView* view, bool drawing)
+puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
-	if (!drawing) {
+	if (!expose) {
 		return PUGL_SUCCESS;
 	}
 

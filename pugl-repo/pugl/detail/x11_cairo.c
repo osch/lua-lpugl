@@ -100,7 +100,7 @@ puglX11CairoDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglX11CairoEnter(PuglView* view, bool drawing)
+puglX11CairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	return PUGL_SUCCESS;
 }
@@ -108,12 +108,12 @@ puglX11CairoEnter(PuglView* view, bool drawing)
 
 
 static PuglStatus
-puglX11CairoLeave(PuglView* view, bool drawing)
+puglX11CairoLeave(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglX11CairoSurface* const surface = (PuglX11CairoSurface*)impl->surface;
 
-	if (drawing && surface->crContext) {
+	if (expose && surface->crContext) {
 		cairo_pop_group_to_source(surface->crContext);
 		cairo_paint(surface->crContext);
 	}

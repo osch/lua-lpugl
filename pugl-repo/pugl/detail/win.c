@@ -374,6 +374,12 @@ puglFreeViewInternals(PuglView* view)
 		ReleaseDC(view->impl->hwnd, view->impl->hdc);
 		SetWindowLongPtr(view->impl->hwnd, GWLP_USERDATA, (LONG_PTR)NULL);
 		DestroyWindow(view->impl->hwnd);
+		if (view->impl->updateRegion) {
+		    DeleteObject(view->impl->updateRegion);
+		}
+		if (view->impl->updateRegionData) {
+		    free(view->impl->updateRegionData);
+		}
 		free(view->impl);
 	}
 }
@@ -821,15 +827,54 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
-	case WM_PAINT:
-		GetUpdateRect(view->impl->hwnd, &rect, false);
-		event.expose.type   = PUGL_EXPOSE;
-		event.expose.x      = rect.left;
-		event.expose.y      = rect.top;
-		event.expose.width  = rect.right - rect.left;
-		event.expose.height = rect.bottom - rect.top;
-		event.expose.count  = 0;
-		break;
+	case WM_PAINT: {
+	        if (!view->hints[PUGL_DONT_MERGE_RECTS]) {
+	            goto merged;
+	        }
+                if (!view->impl->updateRegion) {
+                    view->impl->updateRegion = CreateRectRgn(0, 0, 0, 0);
+                    if (!view->impl->updateRegion) goto merged;
+                }
+
+                HRGN region = view->impl->updateRegion;
+                if (GetUpdateRgn(view->impl->hwnd, region, false) == ERROR) goto merged;
+
+                DWORD bytesCount = GetRegionData(region, 0, NULL);
+                if (bytesCount > view->impl->updateRegionLength) {
+                    RGNDATA* newData = realloc(view->impl->updateRegionData, bytesCount);
+                    if (!newData) goto merged;
+                    view->impl->updateRegionData   = newData;
+                    view->impl->updateRegionLength = bytesCount;
+                }
+                RGNDATA* data = view->impl->updateRegionData;
+                if (GetRegionData(region, bytesCount, data) == 0) goto merged;
+                
+                DWORD count = data->rdh.nCount;
+                if (data->rdh.iType != RDH_RECTANGLES || count <= 0)  goto merged;
+                
+                RECT* rects = (RECT*)&data->Buffer;
+                event.expose.type   = PUGL_EXPOSE;
+                for (int i = 0; i < count; ++i) {
+                    event.expose.x      = rects[i].left;
+                    event.expose.y      = rects[i].top;
+                    event.expose.width  = rects[i].right - rects[i].left;
+                    event.expose.height = rects[i].bottom - rects[i].top;
+                    event.expose.count  = count - i - 1;
+                    if (i + 1 < count) {
+                        puglDispatchEvent(view, &event);
+                    }
+                }
+                break;
+            merged:
+                GetUpdateRect(view->impl->hwnd, &rect, false);
+                event.expose.type   = PUGL_EXPOSE;
+                event.expose.x      = rect.left;
+                event.expose.y      = rect.top;
+                event.expose.width  = rect.right - rect.left;
+                event.expose.height = rect.bottom - rect.top;
+                event.expose.count  = 0;
+                break;
+            }
 	case WM_ERASEBKGND:
 		return true;
 	case WM_MOUSEACTIVATE:
@@ -1337,22 +1382,28 @@ puglHasClipboard(PuglWorld*  world)
 }
 
 static PuglStatus
-puglWinStubEnter(PuglView* view, bool drawing)
+puglWinStubEnter(PuglView* view, const PuglEventExpose* expose)
 {
-	if (drawing) {
-		PAINTSTRUCT ps;
-		BeginPaint(view->impl->hwnd, &ps);
+	if (expose) {
+		if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
+			view->impl->hasBeginPaint = false;
+		} else {
+			PAINTSTRUCT ps;
+			BeginPaint(view->impl->hwnd, &ps);
+			view->impl->hasBeginPaint = true;
+		}
 	}
 
 	return PUGL_SUCCESS;
 }
 
 static PuglStatus
-puglWinStubLeave(PuglView* view, bool drawing)
+puglWinStubLeave(PuglView* view, const PuglEventExpose* expose)
 {
-	if (drawing) {
+	if (expose && view->impl->hasBeginPaint) {
 		PAINTSTRUCT ps;
 		EndPaint(view->impl->hwnd, &ps);
+		view->impl->hasBeginPaint = false;
 		SwapBuffers(view->impl->hdc);
 	}
 

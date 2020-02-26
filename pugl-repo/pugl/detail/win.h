@@ -41,11 +41,15 @@ struct PuglInternalsImpl {
 	int          pfId;
 	HWND         hwnd;
 	HDC          hdc;
+	HRGN         updateRegion;
+	RGNDATA*     updateRegionData;
+	DWORD        updateRegionLength;
 	PuglSurface* surface;
 	DWORD        refreshRate;
 	bool         flashing;
 	bool         resizing;
 	bool         mouseTracked;
+	bool         hasBeginPaint;
 };
 
 static wchar_t*

@@ -94,7 +94,8 @@ typedef enum {
 	PUGL_SWAP_INTERVAL,         ///< Number of frames between buffer swaps
 	PUGL_RESIZABLE,             ///< True if window should be resizable
 	PUGL_IGNORE_KEY_REPEAT,     ///< True if key repeat events are ignored
-	PUGL_IS_POPUP,              ///< True if window is popup window */
+	PUGL_IS_POPUP,              ///< True if window is popup window
+	PUGL_DONT_MERGE_RECTS,      ///< True if redraw rects are not merged
 
 	PUGL_NUM_WINDOW_HINTS
 } PuglViewHint;

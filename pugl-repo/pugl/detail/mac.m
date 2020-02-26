@@ -203,7 +203,7 @@ rescheduleProcessTimer(PuglWorld* world)
 	puglview->backend->resize(puglview, bounds.size.width, bounds.size.height);
 }
 
-- (void) dispatchExpose:(NSRect)rect
+- (void) dispatchExpose:(NSRect)rect count:(int)count
 {
         if (!puglview) return;
         
@@ -230,7 +230,7 @@ rescheduleProcessTimer(PuglWorld* world)
 		rect.origin.y,
 		rect.size.width,
 		rect.size.height,
-		0
+		count
 	};
 
 	puglDispatchEvent(puglview, (PuglEvent*)&ev);

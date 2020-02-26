@@ -811,15 +811,6 @@ puglWaitForEvent(PuglView* view)
 	return PUGL_SUCCESS;
 }
 
-static bool
-exposeEventsIntersect(const PuglEvent* a, const PuglEvent* b)
-{
-	return !(a->expose.x + a->expose.width < b->expose.x ||
-	         b->expose.x + b->expose.width < a->expose.x ||
-	         a->expose.y + a->expose.height < b->expose.y ||
-	         b->expose.y + b->expose.height < a->expose.y);
-}
-
 static void
 mergeExposeEvents(PuglEvent* dst, const PuglEvent* src)
 {
@@ -842,22 +833,17 @@ mergeExposeEvents(PuglEvent* dst, const PuglEvent* src)
 static void
 addPendingExpose(PuglView* view, const PuglEvent* expose)
 {
-	if (view->impl->pendingConfigure.type ||
-	    (view->impl->pendingExpose.type &&
-	     exposeEventsIntersect(&view->impl->pendingExpose, expose))) {
-		// Pending configure or an intersecting expose, expand it
-		mergeExposeEvents(&view->impl->pendingExpose, expose);
-	} else {
-		if (view->impl->pendingExpose.type) {
-			// Pending non-intersecting expose, dispatch it now
-			// This isn't ideal, but avoids needing to maintain an expose list
-			puglEnterContext(view, true);
-			puglDispatchEvent(view, &view->impl->pendingExpose);
-			puglLeaveContext(view, true);
-		}
-
-		view->impl->pendingExpose = *expose;
-	}
+        if (view->hints[PUGL_DONT_MERGE_RECTS]) {
+            if (view->impl->pendingExpose.type) {
+                puglEnterContext(view, true);
+                view->impl->pendingExpose.expose.count += 1 + expose->expose.count;
+                puglDispatchEvent(view, &view->impl->pendingExpose);
+                puglLeaveContext(view, true);
+            }
+            view->impl->pendingExpose = *expose;
+        } else {
+            mergeExposeEvents(&view->impl->pendingExpose, expose);
+        }
 }
 
 static void
@@ -896,6 +882,9 @@ puglAwake(PuglWorld* world)
 PUGL_API PuglStatus
 puglDispatchEvents(PuglWorld* world)
 {
+        bool wasDispatchingEvents = world->impl->dispatchingEvents;
+	world->impl->dispatchingEvents = true;
+
 	PuglWorldInternals* impl = world->impl;
 	if (    impl->needsProcessing
 	    || (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)))
@@ -909,9 +898,6 @@ puglDispatchEvents(PuglWorld* world)
 	// Flush just once at the start to fill event queue
 	Display* display = world->impl->display;
 	XFlush(display);
-
-        bool wasDispatchingEvents = world->impl->dispatchingEvents;
-	world->impl->dispatchingEvents = true;
 
 	// Process all queued events (locally, without flushing or reading)
 	while (XEventsQueued(display, QueuedAlready) > 0) {
@@ -998,7 +984,7 @@ puglDispatchEvents(PuglWorld* world)
 			PuglEvent* const expose    = &view->impl->pendingExpose;
 	
 			if (configure->type || expose->type) {
-				const bool mustExpose = expose->type && expose->expose.count == 0;
+				const bool mustExpose = expose->type;
 				puglEnterContext(view, mustExpose);
 	
 				flushPendingConfigure(view);
@@ -1062,7 +1048,6 @@ puglPostRedisplayRect(PuglView* view, PuglRect rect)
 		                   x, y,
 		                   w, h,
 		                   0};
-
 		XSendEvent(view->impl->display, view->impl->win, False, 0, (XEvent*)&ev);
 	}
 

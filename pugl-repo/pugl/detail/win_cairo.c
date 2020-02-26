@@ -32,6 +32,7 @@ typedef struct  {
 	cairo_t*         cr;
 	HDC              drawDc;
 	HBITMAP          drawBitmap;
+	bool             hasBeginPaint;
 } PuglWinCairoSurface;
 
 static PuglStatus
@@ -110,27 +111,31 @@ puglWinCairoDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglWinCairoEnter(PuglView* view, bool drawing)
+puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
-	if (!drawing) {
+	if (!expose) {
 		return PUGL_SUCCESS;
 	}
-
-	PAINTSTRUCT ps;
-	BeginPaint(view->impl->hwnd, &ps);
-	cairo_save(surface->cr);
+	if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
+            surface->hasBeginPaint = false;
+        } else {
+	    PAINTSTRUCT ps;
+	    BeginPaint(view->impl->hwnd, &ps);
+	    cairo_save(surface->cr);
+            surface->hasBeginPaint = true;
+        }
 
 	return PUGL_SUCCESS;
 }
 
 static PuglStatus
-puglWinCairoLeave(PuglView* view, bool drawing)
+puglWinCairoLeave(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
-	if (!drawing) {
+	if (!expose || !surface->hasBeginPaint) {
 		return PUGL_SUCCESS;
 	}
 
@@ -143,7 +148,7 @@ puglWinCairoLeave(PuglView* view, bool drawing)
 	PAINTSTRUCT ps;
 	EndPaint(view->impl->hwnd, &ps);
 	SwapBuffers(view->impl->hdc);
-
+	surface->hasBeginPaint = false;
 	return PUGL_SUCCESS;
 }
 
@@ -164,7 +169,12 @@ puglWinCairoResize(PuglView* view,
 static void*
 puglWinCairoGetContext(PuglView* view)
 {
-	return ((PuglWinCairoSurface*)view->impl->surface)->cr;
+        PuglWinCairoSurface* surface = (PuglWinCairoSurface*)view->impl->surface;
+        if (surface->hasBeginPaint) {
+		return surface->cr;
+        } else {
+        	return NULL;
+        }
 }
 
 void*

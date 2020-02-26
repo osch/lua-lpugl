@@ -246,27 +246,33 @@ puglWinGlDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglWinGlEnter(PuglView* view, bool drawing)
+puglWinGlEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglWinGlSurface* surface = (PuglWinGlSurface*)view->impl->surface;
 
 	wglMakeCurrent(view->impl->hdc, surface->hglrc);
 
-	if (drawing) {
-		PAINTSTRUCT ps;
-		BeginPaint(view->impl->hwnd, &ps);
+	if (expose) {
+            if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
+                view->impl->hasBeginPaint = false;
+            } else {
+                PAINTSTRUCT ps;
+                BeginPaint(view->impl->hwnd, &ps);
+                view->impl->hasBeginPaint = true;
+            }
 	}
 
 	return PUGL_SUCCESS;
 }
 
 static PuglStatus
-puglWinGlLeave(PuglView* view, bool drawing)
+puglWinGlLeave(PuglView* view, const PuglEventExpose* expose)
 {
-	if (drawing) {
+	if (expose && view->impl->hasBeginPaint) {
 		PAINTSTRUCT ps;
 		EndPaint(view->impl->hwnd, &ps);
 		SwapBuffers(view->impl->hdc);
+		view->impl->hasBeginPaint = false;
 	}
 
 	wglMakeCurrent(NULL, NULL);

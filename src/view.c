@@ -432,6 +432,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     bool hasPopup = false;
     bool hasParent = false;
     bool isResizable =  false;
+    bool dontMergeRects = false;
     {
         lua_pushnil(L);                 /* -> udata, nil */
         while (lua_next(L, initArg)) {  /* -> udata, key, value */
@@ -455,6 +456,11 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
             {
                 isResizable = lua_toboolean(L, -1);
                 puglSetViewHint(udata->puglView, PUGL_RESIZABLE, isResizable);
+            }
+            else if (checkArgTableValueType(L, initArg, key, "dontMergeRects", LUA_TBOOLEAN))
+            {
+                dontMergeRects = lua_toboolean(L, -1);
+                puglSetViewHint(udata->puglView, PUGL_DONT_MERGE_RECTS, dontMergeRects);
             }
             else if (checkArgTableValueUdata(L, initArg, key, "transientFor", LPUGL_VIEW_CLASS_NAME)
                   || checkArgTableValueUdata(L, initArg, key, "popupFor",     LPUGL_VIEW_CLASS_NAME)
@@ -727,11 +733,12 @@ static int View_getDrawContext(lua_State* L)
     if (!udata->drawing) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "not within exposure event handling");
     }
-    if (udata->backend->newDrawContext) {
+    void* ctx = puglGetContext(udata->puglView);
+    if (ctx && udata->backend->newDrawContext) {
         lua_getuservalue(L, 1);                                                 /* -> view, uservalue */
         if (lua_rawgeti(L, -1, LPUGL_VIEW_UV_DRAWCTX) == LUA_TNIL) {            /* -> view, uservalue, context */
             lua_pop(L, 1);                                                      /* -> view, uservalue */
-            udata->backend->newDrawContext(L, puglGetContext(udata->puglView)); /* -> view, uservalue, context */
+            udata->backend->newDrawContext(L, ctx);                             /* -> view, uservalue, context */
         }
         return 1;
     } else {
