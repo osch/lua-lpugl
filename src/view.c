@@ -44,12 +44,12 @@ static int pushViewMeta(lua_State* L)
 static const char* puglKeyToName(PuglKey key) 
 {
     switch (key) {
-        case PUGL_KEY_BACKSPACE:    return "BACKSPACE";
-        case PUGL_KEY_TAB:          return "TAB";
-        case PUGL_KEY_RETURN:       return "RETURN";
-        case PUGL_KEY_ESCAPE:       return "ESCAPE";
-        case PUGL_KEY_SPACE:        return "SPACE";
-        case PUGL_KEY_DELETE:       return "DELETE";
+        case PUGL_KEY_BACKSPACE:    return "Backspace";
+        case PUGL_KEY_TAB:          return "Tab";
+        case PUGL_KEY_RETURN:       return "Return";
+        case PUGL_KEY_ESCAPE:       return "Escape";
+        case PUGL_KEY_SPACE:        return "Space";
+        case PUGL_KEY_DELETE:       return "Delete";
         
         // Unicode Private Use Area
         case PUGL_KEY_F1:           return "F1";
@@ -64,46 +64,58 @@ static const char* puglKeyToName(PuglKey key)
         case PUGL_KEY_F10:          return "F10";
         case PUGL_KEY_F11:          return "F11";
         case PUGL_KEY_F12:          return "F12";
-        case PUGL_KEY_LEFT:         return "LEFT";
-        case PUGL_KEY_UP:           return "UP";
-        case PUGL_KEY_RIGHT:        return "RIGHT";
-        case PUGL_KEY_DOWN:         return "DOWN";
-        case PUGL_KEY_PAGE_UP:      return "PAGE_UP";
-        case PUGL_KEY_PAGE_DOWN:    return "PAGE_DOWN";
-        case PUGL_KEY_HOME:         return "HOME";
-        case PUGL_KEY_END:          return "END";
-        case PUGL_KEY_INSERT:       return "INSERT";
-        case PUGL_KEY_SHIFT_L:      return "SHIFT_L";
-        case PUGL_KEY_SHIFT_R:      return "SHIFT_R";
-        case PUGL_KEY_CTRL_L:       return "CTRL_L";
-        case PUGL_KEY_CTRL_R:       return "CTRL_R";
-        case PUGL_KEY_ALT_L:        return "ALT_L";
-        case PUGL_KEY_ALT_R:        return "ALT_R";
-        case PUGL_KEY_SUPER_L:      return "SUPER_L";
-        case PUGL_KEY_SUPER_R:      return "SUPER_R";
-        case PUGL_KEY_MENU:         return "MENU";
-        case PUGL_KEY_CAPS_LOCK:    return "CAPS_LOCK";
-        case PUGL_KEY_SCROLL_LOCK:  return "SCROLL_LOCK";
-        case PUGL_KEY_NUM_LOCK:     return "NUM_LOCK";
-        case PUGL_KEY_PRINT_SCREEN: return "PRINT_SCREEN";
-        case PUGL_KEY_PAUSE:        return "PAUSE";
+        case PUGL_KEY_LEFT:         return "Left";
+        case PUGL_KEY_UP:           return "Up";
+        case PUGL_KEY_RIGHT:        return "Right";
+        case PUGL_KEY_DOWN:         return "Down";
+        case PUGL_KEY_PAGE_UP:      return "Page_Up";
+        case PUGL_KEY_PAGE_DOWN:    return "Page_Down";
+        case PUGL_KEY_HOME:         return "Home";
+        case PUGL_KEY_END:          return "End";
+        case PUGL_KEY_INSERT:       return "Insert";
+        case PUGL_KEY_SHIFT_L:      return "Shift_L";
+        case PUGL_KEY_SHIFT_R:      return "Shift_R";
+        case PUGL_KEY_CTRL_L:       return "Ctrl_L";
+        case PUGL_KEY_CTRL_R:       return "Ctrl_R";
+        case PUGL_KEY_ALT_L:        return "Alt_L";
+        case PUGL_KEY_ALT_R:        return "Alt_R";
+        case PUGL_KEY_SUPER_L:      return "Super_L";
+        case PUGL_KEY_SUPER_R:      return "Super_R";
+        case PUGL_KEY_MENU:         return "Menu";
+        case PUGL_KEY_CAPS_LOCK:    return "Caps_Lock";
+        case PUGL_KEY_SCROLL_LOCK:  return "Scroll_Lock";
+        case PUGL_KEY_NUM_LOCK:     return "Num_Lock";
+        case PUGL_KEY_PRINT_SCREEN: return "Print_Screen";
+        case PUGL_KEY_PAUSE:        return "Pause";
 
-        case PUGL_KEY_KP_ENTER:     return "KP_ENTER";
-        case PUGL_KEY_KP_HOME:      return "KP_HOME";
-        case PUGL_KEY_KP_LEFT:      return "KP_LEFT";
-        case PUGL_KEY_KP_UP:        return "KP_UP";
-        case PUGL_KEY_KP_RIGHT:     return "KP_RIGHT";
-        case PUGL_KEY_KP_DOWN:      return "KP_DOWN";
-        case PUGL_KEY_KP_PAGE_UP:   return "KP_PAGE_UP";
-        case PUGL_KEY_KP_PAGE_DOWN: return "KP_PAGE_DOWN";
-        case PUGL_KEY_KP_END:       return "KP_END";
-        case PUGL_KEY_KP_BEGIN:     return "KP_BEGIN";
-        case PUGL_KEY_KP_INSERT:    return "KP_INSERT";
-        case PUGL_KEY_KP_DELETE:    return "KP_DELETE";
-        case PUGL_KEY_KP_MULTIPLY:  return "KP_MULTIPLY";
-        case PUGL_KEY_KP_ADD:       return "KP_ADD";
-        case PUGL_KEY_KP_SUBTRACT:  return "KP_SUBTRACT";
-        case PUGL_KEY_KP_DIVIDE:    return "KP_DIVIDE";
+        case PUGL_KEY_KP_ENTER:     return "KP_Enter";
+        case PUGL_KEY_KP_HOME:      return "KP_Home";
+        case PUGL_KEY_KP_LEFT:      return "KP_Left";
+        case PUGL_KEY_KP_UP:        return "KP_Up";
+        case PUGL_KEY_KP_RIGHT:     return "KP_Right";
+        case PUGL_KEY_KP_DOWN:      return "KP_Down";
+        case PUGL_KEY_KP_PAGE_UP:   return "KP_Page_Up";
+        case PUGL_KEY_KP_PAGE_DOWN: return "KP_Page_Down";
+        case PUGL_KEY_KP_END:       return "KP_End";
+        case PUGL_KEY_KP_BEGIN:     return "KP_Begin";
+        case PUGL_KEY_KP_INSERT:    return "KP_Insert";
+        case PUGL_KEY_KP_DELETE:    return "KP_Delete";
+        case PUGL_KEY_KP_MULTIPLY:  return "KP_Multiply";
+        case PUGL_KEY_KP_ADD:       return "KP_Add";
+        case PUGL_KEY_KP_SUBTRACT:  return "KP_Subtract";
+        case PUGL_KEY_KP_DIVIDE:    return "KP_divide";
+        
+        case PUGL_KEY_KP_0:         return "KP_0";
+        case PUGL_KEY_KP_1:         return "KP_1";
+        case PUGL_KEY_KP_2:         return "KP_2";
+        case PUGL_KEY_KP_3:         return "KP_3";
+        case PUGL_KEY_KP_4:         return "KP_4";
+        case PUGL_KEY_KP_5:         return "KP_5";
+        case PUGL_KEY_KP_6:         return "KP_6";
+        case PUGL_KEY_KP_7:         return "KP_7";
+        case PUGL_KEY_KP_8:         return "KP_8";
+        case PUGL_KEY_KP_9:         return "KP_9";
+        case PUGL_KEY_KP_SEPARATOR: return "KP_Separator";
         
         default:                    return NULL;
     }

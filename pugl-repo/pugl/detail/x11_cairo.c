@@ -90,7 +90,7 @@ puglX11CairoCreate(PuglView* view)
 static PuglStatus
 puglX11CairoDestroy(PuglView* view)
 {
-	PuglInternals* const       impl    = view->impl;
+	PuglInternals* const impl = view->impl;
 	PuglX11CairoSurface* const surface = (PuglX11CairoSurface*)impl->surface;
 
 	puglX11CairoClose(view);

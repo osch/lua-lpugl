@@ -533,7 +533,18 @@ keySymToSpecial(KeySym sym)
 	case XK_KP_Add:      return PUGL_KEY_KP_ADD;
 	case XK_KP_Subtract: return PUGL_KEY_KP_SUBTRACT;
 	case XK_KP_Divide:   return PUGL_KEY_KP_DIVIDE;
-
+        
+        case XK_KP_0:        return PUGL_KEY_KP_0;
+        case XK_KP_1:        return PUGL_KEY_KP_1;
+        case XK_KP_2:        return PUGL_KEY_KP_2;
+        case XK_KP_3:        return PUGL_KEY_KP_3;
+        case XK_KP_4:        return PUGL_KEY_KP_4;
+        case XK_KP_5:        return PUGL_KEY_KP_5;
+        case XK_KP_6:        return PUGL_KEY_KP_6;
+        case XK_KP_7:        return PUGL_KEY_KP_7;
+        case XK_KP_8:        return PUGL_KEY_KP_8;
+        case XK_KP_9:        return PUGL_KEY_KP_9;
+        case XK_KP_Separator:return PUGL_KEY_KP_SEPARATOR;
 	default: break;
 	}
 	return (PuglKey)0;
@@ -563,11 +574,15 @@ translateKey(PuglView* view, XEvent* xevent, PuglEvent* event)
 
 	if (!filter) {
                 // Lookup unshifted key
-	        xevent->xkey.state = 0;
                 char          ustr[8] = {0};
                 KeySym        sym     = 0;
                 XLookupString(&xevent->xkey, ustr, 8, &sym, NULL);
-                const PuglKey special = keySymToSpecial(sym);
+                PuglKey special = keySymToSpecial(sym);
+                if (!special) {
+                    xevent->xkey.state = 0;
+                    XLookupString(&xevent->xkey, ustr, 8, &sym, NULL);
+                    special = keySymToSpecial(sym);
+                }
                 if (special) {
                     event->key.key = special;
                 } else {
@@ -965,7 +980,6 @@ puglDispatchEvents(PuglWorld* world)
 		PuglEvent event = translateEvent(view, xevent);
 
 		if (event.type == PUGL_EXPOSE) {
-			// Expand expose event to be dispatched after loop
 			addPendingExpose(view, &event);
 		} else if (event.type == PUGL_CONFIGURE) {
 			// Expand configure event to be dispatched after loop

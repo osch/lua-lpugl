@@ -5,6 +5,7 @@
 /pugl-repo/.clang-tidy
 /pugl-repo/.git
 /pugl-repo/.gitignore
+/pugl-repo/.gitattributes
 /pugl-repo/.gitlab-ci.yml
 /pugl-repo/doc/
 /pugl-repo/pugl.pc.in
