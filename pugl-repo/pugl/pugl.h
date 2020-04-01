@@ -129,7 +129,8 @@ typedef enum {
 	PUGL_MOD_SHIFT = 1,      ///< Shift key
 	PUGL_MOD_CTRL  = 1 << 1, ///< Control key
 	PUGL_MOD_ALT   = 1 << 2, ///< Alt/Option key
-	PUGL_MOD_SUPER = 1 << 3  ///< Mod4/Command/Windows key
+	PUGL_MOD_SUPER = 1 << 3, ///< Mod4/Command/Windows key
+	PUGL_MOD_ALTGR = 1 << 4  ///< AltGr key
 } PuglMod;
 
 /**

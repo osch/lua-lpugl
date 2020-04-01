@@ -56,6 +56,11 @@ struct PuglWorldInternalsImpl {
 	bool         needsProcessing;
 	int          awake_fds[2];
 	bool         dispatchingEvents;
+	int          shiftKeyStates;
+	int          controlKeyStates;
+	int          altKeyStates;
+	int          altgrKeyStates;
+	int          superKeyStates;
 };
 
 struct PuglInternalsImpl {

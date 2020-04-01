@@ -35,6 +35,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <X11/XKBlib.h>
 
 #include <sys/select.h>
 #include <sys/time.h>
@@ -131,6 +132,45 @@ puglInitWorldInternals(void)
 	}
 
 	impl->nextProcessTime = -1;
+	
+	// Key modifiers
+	XModifierKeymap* map = XGetModifierMapping(display);
+	if (map) {
+            const int max_keypermod = map->max_keypermod;
+            for (int i = 0; i < 8; ++i) {
+                for (int j = 0; j < max_keypermod; ++j) {
+                    const KeyCode keyCode = map->modifiermap[i * max_keypermod + j];
+                    const KeySym  keySym  = XkbKeycodeToKeysym(display, keyCode, 0, 0); // deprecated: XKeycodeToKeysym(display, keyCode, 0);
+                    switch (keySym) {
+                        case XK_Shift_L:   
+                        case XK_Shift_R:          impl->shiftKeyStates   |= (1 << i); break;
+                        
+                        case XK_Control_L: 
+                        case XK_Control_R:        impl->controlKeyStates |= (1 << i); break;
+                        
+                        case XK_Alt_L:     
+                        case XK_Alt_R:     
+                        case XK_Meta_L:
+                        case XK_Meta_R:           impl->altKeyStates     |= (1 << i); break;
+                        
+                        case XK_Super_L:
+                        case XK_Super_R:          impl->superKeyStates   |= (1 << i); break;
+
+                        case XK_Mode_switch: 
+                        case XK_ISO_Level3_Shift: impl->altgrKeyStates   |= (1 << i); break;
+                    }
+                }
+            }
+            XFreeModifiermap(map);
+	} else {
+	    // Fallback
+	    /*impl->shiftKeyStates    = ShiftMask;
+	    impl->controlKeyStates  = ControlMask;
+	    impl->altKeyStates      = Mod1Mask;
+	    impl->superKeyStates    = Mod4Mask;
+	    impl->altgrKeyStates    = Mod5Mask;*/
+	}
+	
 	return impl;
 }
 
@@ -606,12 +646,13 @@ translateKey(PuglView* view, XEvent* xevent, PuglEvent* event)
 }
 
 static uint32_t
-translateModifiers(const unsigned xstate)
+translateModifiers(PuglWorldInternals* impl, const unsigned xstate)
 {
-	return (((xstate & ShiftMask)   ? PUGL_MOD_SHIFT  : 0) |
-	        ((xstate & ControlMask) ? PUGL_MOD_CTRL   : 0) |
-	        ((xstate & Mod1Mask)    ? PUGL_MOD_ALT    : 0) |
-	        ((xstate & Mod4Mask)    ? PUGL_MOD_SUPER  : 0));
+	return (((xstate & impl->shiftKeyStates)   ? PUGL_MOD_SHIFT  : 0) |
+	        ((xstate & impl->controlKeyStates) ? PUGL_MOD_CTRL   : 0) |
+	        ((xstate & impl->altKeyStates)     ? PUGL_MOD_ALT    : 0) |
+	        ((xstate & impl->superKeyStates)   ? PUGL_MOD_SUPER  : 0) |
+	        ((xstate & impl->altgrKeyStates)   ? PUGL_MOD_ALTGR  : 0));
 }
 
 static PuglEvent
@@ -672,7 +713,8 @@ translateEvent(PuglView* view, XEvent xevent)
 		event.motion.y       = xevent.xmotion.y;
 		event.motion.xRoot   = xevent.xmotion.x_root;
 		event.motion.yRoot   = xevent.xmotion.y_root;
-		event.motion.state   = translateModifiers(xevent.xmotion.state);
+		event.motion.state   = translateModifiers(view->world->impl,
+		                                          xevent.xmotion.state);
 		event.motion.isHint  = (xevent.xmotion.is_hint == NotifyHint);
 		break;
 	case ButtonPress:
@@ -683,7 +725,8 @@ translateEvent(PuglView* view, XEvent xevent)
 			event.scroll.y       = xevent.xbutton.y;
 			event.scroll.xRoot   = xevent.xbutton.x_root;
 			event.scroll.yRoot   = xevent.xbutton.y_root;
-			event.scroll.state   = translateModifiers(xevent.xbutton.state);
+			event.scroll.state   = translateModifiers(view->world->impl,
+			                                          xevent.xbutton.state);
 			event.scroll.dx      = 0.0;
 			event.scroll.dy      = 0.0;
 			switch (xevent.xbutton.button) {
@@ -705,7 +748,8 @@ translateEvent(PuglView* view, XEvent xevent)
 			event.button.y      = xevent.xbutton.y;
 			event.button.xRoot  = xevent.xbutton.x_root;
 			event.button.yRoot  = xevent.xbutton.y_root;
-			event.button.state  = translateModifiers(xevent.xbutton.state);
+			event.button.state  = translateModifiers(view->world->impl,
+			                                         xevent.xbutton.state);
 			event.button.button = xevent.xbutton.button;
 		}
 		break;
@@ -719,7 +763,8 @@ translateEvent(PuglView* view, XEvent xevent)
 		event.key.y      = xevent.xkey.y;
 		event.key.xRoot  = xevent.xkey.x_root;
 		event.key.yRoot  = xevent.xkey.y_root;
-		event.key.state  = translateModifiers(xevent.xkey.state);
+		event.key.state  = translateModifiers(view->world->impl,
+		                                      xevent.xkey.state);
 		translateKey(view, &xevent, &event);
 		break;
 	case EnterNotify:
@@ -732,7 +777,8 @@ translateEvent(PuglView* view, XEvent xevent)
 		event.crossing.y      = xevent.xcrossing.y;
 		event.crossing.xRoot  = xevent.xcrossing.x_root;
 		event.crossing.yRoot  = xevent.xcrossing.y_root;
-		event.crossing.state  = translateModifiers(xevent.xcrossing.state);
+		event.crossing.state  = translateModifiers(view->world->impl,
+		                                           xevent.xcrossing.state);
 		event.crossing.mode   = PUGL_CROSSING_NORMAL;
 		if (xevent.xcrossing.mode == NotifyGrab) {
 			event.crossing.mode = PUGL_CROSSING_GRAB;

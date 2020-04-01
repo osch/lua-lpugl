@@ -202,6 +202,9 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl(lua_State* L)
     lua_pushinteger(L, PUGL_MOD_ALT);               /* -> integer */
     lua_setfield(L, module, "MOD_ALT");             /* -> */
 
+    lua_pushinteger(L, PUGL_MOD_ALTGR);               /* -> integer */
+    lua_setfield(L, module, "MOD_ALTGR");             /* -> */
+
     lua_pushinteger(L, PUGL_MOD_SUPER);             /* -> integer */
     lua_setfield(L, module, "MOD_SUPER");           /* -> */
 
