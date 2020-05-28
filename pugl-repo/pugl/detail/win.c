@@ -1045,7 +1045,7 @@ puglSetProcessFunc(PuglWorld* world, PuglProcessFunc processFunc, void* userData
 }
 
 
-static void 
+static void CALLBACK
 processTimerCallback(PVOID   lpParameter,
                      BOOLEAN TimerOrWaitFired)
 {
