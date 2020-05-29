@@ -1,4 +1,4 @@
-local lpugl = require"lpugl.opengl"
+local lpugl = require"lpugl_opengl"
 local gl    = require"luagl"
 local glu   = require"luaglu"
 

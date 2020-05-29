@@ -14,7 +14,7 @@
 
 /* ============================================================================================ */
 
-static const char* const LPUGL_OPENGL_BACKEND_CLASS_NAME = "lpugl.opengl.backend";
+static const char* const LPUGL_OPENGL_BACKEND_CLASS_NAME = "lpugl_opengl.backend";
 
 /* ============================================================================================ */
 
@@ -217,7 +217,7 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl_opengl(lua_State* L)
     int module = ++n; lua_newtable(L);                         /* -> module */
     lua_pushliteral(L, LPUGL_VERSION_STRING);                  /* -> module, version */
     lua_setfield(L, module, "_VERSION");                       /* -> module */
-    lua_pushstring(L, "lpugl.opengl"
+    lua_pushstring(L, "lpugl_opengl"
                    " (Version:" LPUGL_VERSION_STRING 
                    ",Platform:" LPUGL_PLATFORM_STRING
                    ",Date:" LPUGL_BUILD_DATE_STRING ")" );     /* -> module, info */
@@ -231,7 +231,7 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl_opengl(lua_State* L)
         lua_pushstring(L, "lpugl");                            /* -> module, meta, require, "lpugl" */
         lua_call(L, 1, 1);                                     /* -> module, meta, lpugl */
         lua_setfield(L, -2, "__index");                        /* -> module, meta */
-        lua_pushliteral(L, "lpugl.opengl");                    /* -> module, meta, string */
+        lua_pushliteral(L, "lpugl_opengl");                    /* -> module, meta, string */
         lua_setfield(L, -2, "__metatable");                    /* -> module, meta */
         lua_setmetatable(L, module);                           /* -> module */
         return 1;

@@ -11,7 +11,7 @@ description = {
   detailed = [[
     LPugl is a minimal portable Lua-API for building GUIs. 
     Currently there are two drawing backends available, 
-    see packages "lpugl.cairo" and "lpugl.opengl".
+    see packages "lpugl_cairo" and "lpugl_opengl".
     Supported platforms: X11, Windows and Mac OS X. 
     LPugl is based on Pugl, a minimal portable API for embeddable GUIs,
     see: https://drobilla.net/software/pugl

@@ -7,10 +7,10 @@
    * [Module Functions](#module-functions)
         * [lpugl.newWorld()](#lpugl_newWorld)
         * [lpugl.world()](#lpugl_world)
-        * [lpugl.cairo.newWorld()](#lpugl_cairo_newWorld)
-        * [lpugl.cairo.newBackend()](#lpugl_cairo_newBackend)
-        * [lpugl.opengl.newWorld()](#lpugl_opengl_newWorld)
-        * [lpugl.opengl.newBackend()](#lpugl_opengl_newBackend)
+        * [lpugl_cairo.newWorld()](#lpugl_cairo_newWorld)
+        * [lpugl_cairo.newBackend()](#lpugl_cairo_newBackend)
+        * [lpugl_opengl.newWorld()](#lpugl_opengl_newWorld)
+        * [lpugl_opengl.newBackend()](#lpugl_opengl_newBackend)
    * [Module Constants](#module-constants)
         * [lpugl.platform](#lpugl_platform)
    * [World Methods](#world-methods)
@@ -45,21 +45,21 @@
    
 LPugl provides three LuaRocks modules 
    * **[lpugl]**        - platform specific base module
-   * **[lpugl.cairo]**  - Cairo rendering backend module
-   * **[lpugl.opengl]** - OpenGL rendering backend module
+   * **[lpugl_cairo]**  - Cairo rendering backend module
+   * **[lpugl_opengl]** - OpenGL rendering backend module
 
 Each of these modules provides a Lua package with the same name which can be 
 loaded via *require()*.
 
-The backend packages *lpugl.cairo* and *lpugl.opengl* automatically require
+The backend packages *lpugl_cairo* and *lpugl_opengl* automatically require
 the base package *lpugl*. All members from the base package are available in
 the backend packages, i.e if you intend to work only with one backend, it is
 sufficient just to require the corresponding backend package, i.e.
 
 ```lua
-local XXX = require("lpugl.cairo")
+local XXX = require("lpugl_cairo")
 ```
-makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the name *XXX*.
+makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the name *XXX*.
 
 
 <!-- ---------------------------------------------------------------------------------------- -->
@@ -86,7 +86,7 @@ makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the 
   `**</a>
   
   Creates a lua object for restricted access to an existing world object that has
-  been created with *lpugl.newWorld()*, *lpugl.cairo.newWorld()* or *lpugl.opengl.newWorld()*.
+  been created with *lpugl.newWorld()*, *lpugl_cairo.newWorld()* or *lpugl_opengl.newWorld()*.
   
   This function can be invoked from any concurrently running thread. The obtained
   restricted world access can only be used to invoke the [*world:awake()*](#world_awake)
@@ -98,7 +98,7 @@ makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_cairo_newWorld">**`       lpugl.cairo.newWorld(name)
+* <a id="lpugl_cairo_newWorld">**`       lpugl_cairo.newWorld(name)
   `**</a>
   
   This does the same as [*lpugl.newWorld()*](#lpugl_newWorld) but does
@@ -107,7 +107,7 @@ makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_cairo_newBackend">**`     lpugl.cairo.newBackend(world)
+* <a id="lpugl_cairo_newBackend">**`     lpugl_cairo.newBackend(world)
   `**</a>
   
   Creates a new Cairo backend object for the given world.
@@ -117,7 +117,7 @@ makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_opengl_newWorld">**`      lpugl.opengl.newWorld(name)
+* <a id="lpugl_opengl_newWorld">**`      lpugl_opengl.newWorld(name)
   `**</a>
   
   This does the same as [*lpugl.newWorld()*](#lpugl_newWorld) but does
@@ -126,7 +126,7 @@ makes all symbols from the packages *lpugl* and *lpugl.cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_opengl_newBackend">**`    lpugl.opengl.newBackend(world)
+* <a id="lpugl_opengl_newBackend">**`    lpugl_opengl.newBackend(world)
   `**</a>
   
   Creates a new OpenGL backend object for the given world.
@@ -193,7 +193,7 @@ TODO
                  
   The parameter *initArgs* may contain the following parameters as key value pairs:
   
-  * *backend*      - backend object to be used for the created world.
+  * *backend*      - backend object to be used for the created view.
   * *title*        - title for the created window.
   * *resizable*    - *true* if the created window should be resizable.
   * *parent*       - optional parent view. If given the created view is embedded
@@ -419,6 +419,6 @@ End of document.
 <!-- ---------------------------------------------------------------------------------------- -->
 
 [lpugl]:                    https://luarocks.org/modules/osch/lpugl
-[lpugl.cairo]:              https://luarocks.org/modules/osch/lpugl.cairo
-[lpugl.opengl]:             https://luarocks.org/modules/osch/lpugl.opengl
+[lpugl_cairo]:              https://luarocks.org/modules/osch/lpugl_cairo
+[lpugl_opengl]:             https://luarocks.org/modules/osch/lpugl_opengl
 [mtmsg]:                    https://github.com/osch/lua-mtmsg#mtmsg

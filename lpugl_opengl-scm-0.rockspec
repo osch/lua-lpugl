@@ -1,4 +1,4 @@
-package = "lpugl.opengl"
+package = "lpugl_opengl"
 version = "scm-0"
 source = {
   url = "https://github.com/osch/lua-lpugl/archive/master.zip",
@@ -29,14 +29,14 @@ build = {
   platforms = {
     linux = {
       modules = {
-        ["lpugl.opengl"] = {
+        ["lpugl_opengl"] = {
           libraries = { "GL", "pthread" },
         }
       }
     },
     windows = {
       modules = {
-        ["lpugl.opengl"] = {
+        ["lpugl_opengl"] = {
           libraries = { "opengl32", "kernel32", "gdi32", "user32" },
         }
       }
@@ -49,7 +49,7 @@ build = {
         GL  = { header = false },
       },
       modules = {
-        ["lpugl.opengl"] = {
+        ["lpugl_opengl"] = {
           sources   = { "src/pugl_opengl.m" },
           libraries = { "pthread" },
           variables = {
@@ -62,7 +62,7 @@ build = {
     },
   },
   modules = {
-    ["lpugl.opengl"] = {
+    ["lpugl_opengl"] = {
       sources = { "src/pugl_opengl.c",
                   "src/lpugl_opengl.c",
                   "src/lpugl_compat.c" },

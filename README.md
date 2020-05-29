@@ -23,8 +23,8 @@ application and also in the same window by embedding different view objects.
 
 #### LuaRocks modules:
    * **[lpugl]**        - platform specific base module
-   * **[lpugl.cairo]**  - Cairo rendering backend module
-   * **[lpugl.opengl]** - OpenGL rendering backend module
+   * **[lpugl_cairo]**  - Cairo rendering backend module
+   * **[lpugl_opengl]** - OpenGL rendering backend module
 
 
 #### Further reading:
@@ -36,7 +36,7 @@ application and also in the same window by embedding different view objects.
 * Simple example for using the Cairo backend:
 
     ```lua
-    local lpugl = require"lpugl.cairo"
+    local lpugl = require"lpugl_cairo"
     
     local world = lpugl.newWorld("Hello World App")
     
@@ -77,6 +77,6 @@ application and also in the same window by embedding different view objects.
 [OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 [lwtk]:                     https://github.com/osch/lua-lwtk#lwtk---lua-widget-toolkit
 [lpugl]:                    https://luarocks.org/modules/osch/lpugl
-[lpugl.cairo]:              https://luarocks.org/modules/osch/lpugl.cairo
-[lpugl.opengl]:             https://luarocks.org/modules/osch/lpugl.opengl
+[lpugl_cairo]:              https://luarocks.org/modules/osch/lpugl_cairo
+[lpugl_opengl]:             https://luarocks.org/modules/osch/lpugl_opengl
 

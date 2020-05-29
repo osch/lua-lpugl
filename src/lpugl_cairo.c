@@ -34,7 +34,7 @@
 
 static const char* const OOCAIRO_MT_NAME_CONTEXT = "6404c570-6711-11dd-b66f-00e081225ce5";
 
-static const char* const LPUGL_CAIRO_BACKEND_CLASS_NAME = "lpugl.cairo.backend";
+static const char* const LPUGL_CAIRO_BACKEND_CLASS_NAME = "lpugl_cairo.backend";
 
 /* ============================================================================================ */
 
@@ -72,7 +72,7 @@ static int Backend_getLayoutContext(lua_State* L)
     LpuglCairoBackend* udata = luaL_checkudata(L, 1, LPUGL_CAIRO_BACKEND_CLASS_NAME);
     
     if (!udata->base.world) {
-        return lpugl_error(L, LPUGL_ERROR_ILLEGAL_STATE ": lpugl.cairo.backend closed");
+        return lpugl_error(L, LPUGL_ERROR_ILLEGAL_STATE ": lpugl_cairo.backend closed");
     }
     
     lua_getuservalue(L, 1);                                            /* -> uservalue */
@@ -384,7 +384,7 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo(lua_State* L)
 
     lua_pushliteral(L, LPUGL_VERSION_STRING);               /* -> module, version */
     lua_setfield(L, module, "_VERSION");                    /* -> module */
-    lua_pushstring(L, "lpugl.cairo"
+    lua_pushstring(L, "lpugl_cairo"
                    " (Version:" LPUGL_VERSION_STRING 
                    ",Platform:" LPUGL_PLATFORM_STRING
                    ",Date:" LPUGL_BUILD_DATE_STRING ")" );  /* -> module, info */
@@ -399,9 +399,9 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl_cairo(lua_State* L)
         lua_pushstring(L, "lpugl");                         /* -> module, meta, require, require, "lpugl" */
         lua_call(L, 1, 1);                                  /* -> module, meta, require, lpugl */
         lua_setfield(L, -3, "__index");                     /* -> module, meta, require */
-        lua_pushliteral(L, "lpugl.cairo");                  /* -> module, meta, require, "lpugl.cairo" */
+        lua_pushliteral(L, "lpugl_cairo");                  /* -> module, meta, require, "lpugl_cairo" */
         lua_setfield(L, -3, "__metatable");                 /* -> module, meta, require */
-        // assure that oocairo is loaded before loading of lpugl.cairo finishes
+        // assure that oocairo is loaded before loading of lpugl_cairo finishes
         lua_pushstring(L, "oocairo");                       /* -> module, meta, require, "oocairo" */
         lua_call(L, 1, 0);                                  /* -> module, meta */
         lua_setmetatable(L, module);                        /* -> module */

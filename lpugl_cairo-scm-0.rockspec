@@ -1,4 +1,4 @@
-package = "lpugl.cairo"
+package = "lpugl_cairo"
 version = "scm-0"
 source = {
   url = "https://github.com/osch/lua-lpugl/archive/master.zip",
@@ -31,21 +31,21 @@ build = {
   platforms = {
     linux = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl_cairo"] = {
           libraries = { "cairo", "pthread" },
         }
       }
     },
     windows = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl_cairo"] = {
           libraries = { "cairo", "kernel32", "gdi32", "user32" },
         }
       }
     },
     macosx = {
       modules = {
-        ["lpugl.cairo"] = {
+        ["lpugl_cairo"] = {
           sources   = { "src/pugl_cairo.m" },
           libraries = { "cairo", "pthread"  },
           variables = {
@@ -58,7 +58,7 @@ build = {
     },
   },
   modules = {
-    ["lpugl.cairo"] = {
+    ["lpugl_cairo"] = {
       sources = { "src/pugl_cairo.c",
                   "src/lpugl_cairo.c",
                   "src/lpugl_compat.c" },

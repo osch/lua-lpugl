@@ -1,4 +1,4 @@
-local lpugl = require"lpugl.cairo"
+local lpugl = require"lpugl_cairo"
 
 local world = lpugl.newWorld("Hello World App")
 

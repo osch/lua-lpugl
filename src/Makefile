@@ -1,5 +1,5 @@
-.PHONY: default lpugl lpugl.cairo
-default: lpugl lpugl.cairo lpugl.opengl
+.PHONY: default lpugl lpugl_cairo
+default: lpugl lpugl_cairo lpugl_opengl
 
 BUILD_DATE=$(shell date "+%Y-%m-%dT%H:%M:%S")
 
@@ -62,7 +62,7 @@ lpugl:
 	    lpugl_compat.c \
 	    $(LOPTS)
 
-lpugl.cairo:
+lpugl_cairo:
 	@mkdir -p lpugl
 	$(GCC_RUN) -g \
 	    $(COPTS) \
@@ -74,7 +74,7 @@ lpugl.cairo:
 	    lpugl_compat.c \
 	    $(LOPTS) $(LOPTS_CAIRO) 
 	    
-lpugl.opengl:
+lpugl_opengl:
 	@mkdir -p lpugl
 	$(GCC_RUN) -g \
 	    $(COPTS) \
