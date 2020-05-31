@@ -63,23 +63,21 @@ lpugl:
 	    $(LOPTS)
 
 lpugl_cairo:
-	@mkdir -p lpugl
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I /usr/include/cairo \
 	    -I../pugl-repo/ \
-	    -o lpugl/cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
+	    -o lpugl_cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    async_util.c   util.c pugl_cairo.$(PUGLC_EXT) \
 	    lpugl_compat.c \
 	    $(LOPTS) $(LOPTS_CAIRO) 
 	    
 lpugl_opengl:
-	@mkdir -p lpugl
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I../pugl-repo/ \
-	    -o lpugl/opengl.$(SO_EXT) lpugl_opengl.c -D LPUGL_VERSION=Makefile-1  \
+	    -o lpugl_opengl.$(SO_EXT) lpugl_opengl.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    async_util.c   util.c pugl_opengl.$(PUGLC_EXT) \
 	    lpugl_compat.c \
