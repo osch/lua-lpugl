@@ -28,73 +28,58 @@
 #include <stdlib.h>
 
 typedef struct  {
-	cairo_surface_t* surface;
-	cairo_t*         cr;
-	HDC              drawDc;
-	HBITMAP          drawBitmap;
+	cairo_surface_t* crSurface;
+	cairo_t*         crContext;
 	bool             hasBeginPaint;
 } PuglWinCairoSurface;
 
-static PuglStatus
-puglWinCairoCreateDrawContext(PuglView* view)
+static void
+puglWinCairoClose(PuglView* view)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
 
-	surface->drawDc     = CreateCompatibleDC(impl->hdc);
-	surface->drawBitmap = CreateCompatibleBitmap(
-		impl->hdc, (int)view->frame.width, (int)view->frame.height);
+	if (surface) {
+		if (surface->crContext) {
+			cairo_destroy(surface->crContext);
+			surface->crContext = NULL;
+		}
+		if (surface->crSurface) {
+			cairo_surface_destroy(surface->crSurface);
+			surface->crSurface = NULL;
+		}
+	}
+}
 
-	DeleteObject(SelectObject(surface->drawDc, surface->drawBitmap));
+static PuglStatus 
+puglWinCairoOpen(PuglView* view)
+{
+	PuglInternals* const       impl    = view->impl;
+	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
 
-	cairo_status_t st = CAIRO_STATUS_SUCCESS;
-	if (!(surface->surface = cairo_win32_surface_create(surface->drawDc)) ||
-	    (st = cairo_surface_status(surface->surface)) ||
-	    !(surface->cr = cairo_create(surface->surface)) ||
-	    (st = cairo_status(surface->cr))) {
+	puglWinCairoClose(view); // just to be sure
+	
+	surface->crSurface = cairo_win32_surface_create(impl->hdc);
+	
+	if (surface->crSurface) {
+		surface->crContext = cairo_create(surface->crSurface);
+	}
+	if (surface->crContext) {
+		return PUGL_SUCCESS;
+	} else {
+		puglWinCairoClose(view);
 		return PUGL_CREATE_CONTEXT_FAILED;
 	}
-
-	cairo_save(surface->cr);
-	return PUGL_SUCCESS;
-}
-
-static PuglStatus
-puglWinCairoDestroyDrawContext(PuglView* view)
-{
-	PuglInternals* const       impl    = view->impl;
-	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
-
-	DeleteDC(surface->drawDc);
-	DeleteObject(surface->drawBitmap);
-	cairo_destroy(surface->cr);
-	cairo_surface_destroy(surface->surface);
-
-	surface->surface    = NULL;
-	surface->cr         = NULL;
-	surface->drawDc     = NULL;
-	surface->drawBitmap = NULL;
-
-	return PUGL_SUCCESS;
-}
-
-static PuglStatus
-puglWinCairoConfigure(PuglView* view)
-{
-	const PuglStatus st = puglWinStubConfigure(view);
-
-	if (!st) {
-		view->impl->surface = (PuglWinCairoSurface*)calloc(
-			1, sizeof(PuglWinCairoSurface));
-	}
-
-	return st;
 }
 
 static PuglStatus
 puglWinCairoCreate(PuglView* view)
 {
-	return puglWinCairoCreateDrawContext(view);
+	PuglInternals* const impl    = view->impl;
+
+	impl->surface = calloc(1, sizeof(PuglWinCairoSurface));
+
+	return PUGL_SUCCESS;
 }
 
 static PuglStatus
@@ -103,7 +88,7 @@ puglWinCairoDestroy(PuglView* view)
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
 
-	puglWinCairoDestroyDrawContext(view);
+	puglWinCairoClose(view);
 	free(surface);
 	impl->surface = NULL;
 
@@ -115,18 +100,17 @@ puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
+
 	if (!expose) {
-		return PUGL_SUCCESS;
+	    return PUGL_SUCCESS;
 	}
-	if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
+	else if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
             surface->hasBeginPaint = false;
         } else {
 	    PAINTSTRUCT ps;
 	    BeginPaint(view->impl->hwnd, &ps);
-	    cairo_save(surface->cr);
             surface->hasBeginPaint = true;
-        }
-
+	}
 	return PUGL_SUCCESS;
 }
 
@@ -135,20 +119,18 @@ puglWinCairoLeave(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
-	if (!expose || !surface->hasBeginPaint) {
-		return PUGL_SUCCESS;
+
+	if (expose && surface->crContext) {
+		cairo_pop_group_to_source(surface->crContext);
+		cairo_paint(surface->crContext);
+		if (surface->hasBeginPaint) {
+		    PAINTSTRUCT ps;
+		    EndPaint(impl->hwnd, &ps);
+		    surface->hasBeginPaint = false;
+		}
 	}
+	puglWinCairoClose(view);
 
-	cairo_restore(surface->cr);
-	cairo_surface_flush(surface->surface);
-	BitBlt(impl->hdc,
-	       0, 0, (int)view->frame.width, (int)view->frame.height,
-	       surface->drawDc, 0, 0, SRCCOPY);
-
-	PAINTSTRUCT ps;
-	EndPaint(view->impl->hwnd, &ps);
-	SwapBuffers(view->impl->hdc);
-	surface->hasBeginPaint = false;
 	return PUGL_SUCCESS;
 }
 
@@ -157,37 +139,30 @@ puglWinCairoResize(PuglView* view,
                    int       PUGL_UNUSED(width),
                    int       PUGL_UNUSED(height))
 {
-	PuglStatus st = PUGL_SUCCESS;
-	if ((st = puglWinCairoDestroyDrawContext(view)) ||
-	    (st = puglWinCairoCreateDrawContext(view))) {
-		return st;
-	}
-
+	puglWinCairoClose(view);
 	return PUGL_SUCCESS;
 }
 
 static void*
 puglWinCairoGetContext(PuglView* view)
 {
-        PuglWinCairoSurface* surface = (PuglWinCairoSurface*)view->impl->surface;
-        if (surface->hasBeginPaint) {
-		return surface->cr;
-        } else {
-        	return NULL;
-        }
-}
+	PuglInternals* const       impl    = view->impl;
+	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
 
-void*
-puglCairoBackendGetNativeWorld(PuglWorld* PUGL_UNUSED(world))
-{
-	return GetModuleHandle(NULL);
+	if (!surface->crContext) {
+		puglWinCairoOpen(view);
+		if (surface->crContext) {
+			cairo_push_group_with_content(surface->crContext, CAIRO_CONTENT_COLOR_ALPHA);
+		}
+	}
+	return surface->crContext;
 }
 
 const PuglBackend*
 puglCairoBackend()
 {
 	static const PuglBackend backend = {
-		puglWinCairoConfigure,
+		puglWinStubConfigure,
 		puglWinCairoCreate,
 		puglWinCairoDestroy,
 		puglWinCairoEnter,
