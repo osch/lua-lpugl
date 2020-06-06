@@ -288,6 +288,7 @@ keySymToSpecial(const NSEvent* const ev)
 		switch ([chars characterAtIndex:0]) {
 		case NSDeleteCharacter:         return PUGL_KEY_BACKSPACE;
 		case NSTabCharacter:            return PUGL_KEY_TAB;
+		case NSBackTabCharacter:        return PUGL_KEY_TAB;
 		case NSCarriageReturnCharacter: return PUGL_KEY_RETURN;
 		case NSEnterCharacter:          return PUGL_KEY_KP_ENTER;
 		case 0x001B:                    return PUGL_KEY_ESCAPE;
