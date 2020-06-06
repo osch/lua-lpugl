@@ -132,12 +132,13 @@ static PuglStatus
 puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
 	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
-	if (!expose) {
-		return PUGL_SUCCESS;
-	}
 
 	assert(!drawView->surface);
 	assert(!drawView->cr);
+
+	if (!expose || (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0)) {
+		return PUGL_SUCCESS;
+	}
 
 	CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
 
@@ -145,7 +146,9 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 		context, view->frame.width, view->frame.height);
 
 	drawView->cr = cairo_create(drawView->surface);
-
+        
+        cairo_push_group_with_content(drawView->cr, CAIRO_CONTENT_COLOR_ALPHA);
+	
 	return PUGL_SUCCESS;
 }
 
@@ -156,19 +159,17 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
 	if (!expose) {
 		return PUGL_SUCCESS;
 	}
+        if (drawView->surface) {
+            assert(drawView->cr);
+            
+            cairo_pop_group_to_source(drawView->cr);
+            cairo_paint(drawView->cr);
 
-	assert(drawView->surface);
-	assert(drawView->cr);
-
-	CGContextRef context = cairo_quartz_surface_get_cg_context(drawView->surface);
-
-	cairo_destroy(drawView->cr);
-	cairo_surface_destroy(drawView->surface);
-	drawView->cr      = NULL;
-	drawView->surface = NULL;
-
-	CGContextFlush(context);
-
+            cairo_destroy(drawView->cr);
+            cairo_surface_destroy(drawView->surface);
+            drawView->cr      = NULL;
+            drawView->surface = NULL;
+        }
 	return PUGL_SUCCESS;
 }
 
