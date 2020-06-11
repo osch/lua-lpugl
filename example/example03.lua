@@ -6,6 +6,8 @@ local ceil  = math.ceil
 local abs   = math.abs
 local sqrt  = math.sqrt
 
+local unpack = table.unpack or unpack -- for Lua 5.1
+
 local world = lpugl.newWorld("example03.lua")
 
 math.randomseed(os.time())
@@ -49,7 +51,7 @@ do
             local surface = oocairo.surface_create_similar(layoutTarget, "color-alpha", 2*(r+padding), 2*(r+padding))
             local cairo = oocairo.context_create(surface)
             drawBallImpl(cairo, r + padding, r + padding, r,
-                         table.unpack(gradientTable[gradientIndex]))
+                         unpack(gradientTable[gradientIndex]))
             c2[r] = surface
         end
     end
@@ -72,7 +74,7 @@ do
             end
         else
             drawBallImpl(cairo, x, y, r,
-                         table.unpack(gradientTable[gradientIndex]))
+                         unpack(gradientTable[gradientIndex]))
         end
     end
 end
