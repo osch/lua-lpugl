@@ -29,6 +29,9 @@
 
 #include <assert.h>
 
+
+#define WITHOUT_INTERPOLATION 1
+
 @interface PuglCairoView : NSView
 {
 @public
@@ -139,14 +142,25 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 	if (!expose || (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0)) {
 		return PUGL_SUCCESS;
 	}
+    #if WITHOUT_INTERPOLATION
+	drawView->surface = cairo_image_surface_create (
+		CAIRO_FORMAT_RGB24, view->frame.width, view->frame.height);
 
+	drawView->cr = cairo_create(drawView->surface);
+	cairo_matrix_t m = {
+	    1,  0,
+	    0, -1,
+	    0, view->frame.height
+	};
+	cairo_transform(drawView->cr, &m);
+    #else
 	CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
 
 	drawView->surface = cairo_quartz_surface_create_for_cg_context(
 		context, view->frame.width, view->frame.height);
 
 	drawView->cr = cairo_create(drawView->surface);
-        
+    #endif        
         cairo_push_group_with_content(drawView->cr, CAIRO_CONTENT_COLOR_ALPHA);
 	
 	return PUGL_SUCCESS;
@@ -165,6 +179,36 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
             cairo_pop_group_to_source(drawView->cr);
             cairo_paint(drawView->cr);
 
+        #if WITHOUT_INTERPOLATION
+            cairo_surface_flush(drawView->surface);
+            
+            unsigned char* surfaceData = cairo_image_surface_get_data(drawView->surface);
+
+            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+            
+            CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData, 
+                                                               view->frame.width, 
+                                                               view->frame.height,
+                                                               8, // bitsPerComponent
+                                                               4 * view->frame.width,// inputBytesPerRow, 
+                                                               colorSpace,
+                                                               kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst);
+                                                               //kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault);
+            CGImageRef cgImage = CGBitmapContextCreateImage(bitmapContext);
+            {
+                CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+                //CGContextSetRenderingIntent(context, kCGRenderingIntentDefault);
+                CGContextSetInterpolationQuality(context, kCGInterpolationNone);
+                //CGContextTranslateCTM(context, 0, view->frame.height);
+                //CGContextScaleCTM(context, 1.0, -1.0);
+                CGContextDrawImage(context, 
+                                   CGRectMake(0,0,view->frame.width,view->frame.height), 
+                                   cgImage);
+            }
+            CGImageRelease(cgImage);
+            CGContextRelease(bitmapContext);
+            CGColorSpaceRelease(colorSpace);
+        #endif
             cairo_destroy(drawView->cr);
             cairo_surface_destroy(drawView->surface);
             drawView->cr      = NULL;
