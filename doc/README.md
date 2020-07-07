@@ -234,7 +234,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_update">**`               world:update(timeout)`**
+* <a id="world_update">**`               world:update(timeout)
+  `**</a>
 
    Update by processing events from the window system.
 
@@ -416,6 +417,7 @@ TODO
   
   *Example:*
   *  if the event handling function *func* is set by the following invocation:
+  
       ```lua
       view:setEventFunc(func, "foo1", "foo2")
       ```
