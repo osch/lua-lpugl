@@ -269,6 +269,7 @@ static PuglStatus
 puglWinGlLeave(PuglView* view, const PuglEventExpose* expose)
 {
 	if (expose && view->impl->hasBeginPaint) {
+	        glFinish();
 		PAINTSTRUCT ps;
 		EndPaint(view->impl->hwnd, &ps);
 		SwapBuffers(view->impl->hdc);
