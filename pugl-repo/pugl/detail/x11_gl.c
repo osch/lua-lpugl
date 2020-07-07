@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,21 +15,22 @@
 */
 
 /**
-   @file x11_gl.c OpenGL graphics backend for X11.
+   @file x11_gl.c
+   @brief OpenGL graphics backend for X11.
 */
 
+#include "pugl/detail/stub.h"
 #include "pugl/detail/types.h"
 #include "pugl/detail/x11.h"
 #include "pugl/pugl.h"
 #include "pugl/pugl_gl.h"
-#include "pugl/pugl_stub.h"
 
 #include <GL/glx.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,13 +40,13 @@ typedef struct {
 	int         double_buffered;
 } PuglX11GlSurface;
 
-static PuglStatus
+static int
 puglX11GlHintValue(const int value)
 {
 	return value == PUGL_DONT_CARE ? (int)GLX_DONT_CARE : value;
 }
 
-static PuglStatus
+static int
 puglX11GlGetAttrib(Display* const display,
                    GLXFBConfig    fb_config,
                    const int      attrib)
@@ -85,23 +86,28 @@ puglX11GlConfigure(PuglView* view)
 	int          n_fbc = 0;
 	GLXFBConfig* fbc   = glXChooseFBConfig(display, screen, attrs, &n_fbc);
 	if (n_fbc <= 0) {
-		fprintf(stderr, "error: Failed to create GL context\n");
 		return PUGL_CREATE_CONTEXT_FAILED;
 	}
 
 	surface->fb_config = fbc[0];
 	impl->vi           = glXGetVisualFromFBConfig(impl->display, fbc[0]);
 
-	printf("Using visual 0x%lX: R=%d G=%d B=%d A=%d D=%d"
-	       " DOUBLE=%d SAMPLES=%d\n",
-	       impl->vi->visualid,
-	       puglX11GlGetAttrib(display, fbc[0], GLX_RED_SIZE),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_GREEN_SIZE),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_BLUE_SIZE),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_ALPHA_SIZE),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_DEPTH_SIZE),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER),
-	       puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES));
+	char msg[128];
+
+	snprintf(
+	    msg,
+	    sizeof(msg),
+	    "Using visual 0x%lX: R=%d G=%d B=%d A=%d D=%d DOUBLE=%d SAMPLES=%d\n",
+	    impl->vi->visualid,
+	    puglX11GlGetAttrib(display, fbc[0], GLX_RED_SIZE),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_GREEN_SIZE),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_BLUE_SIZE),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_ALPHA_SIZE),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_DEPTH_SIZE),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER),
+	    puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES));
+
+	view->world->logFunc(view->world, PUGL_LOG_LEVEL_INFO, msg);
 
 	XFree(fbc);
 
@@ -127,14 +133,15 @@ puglX11GlCreate(PuglView* view)
 		                               : GLX_CONTEXT_CORE_PROFILE_BIT_ARB),
 		0};
 
-	typedef GLXContext (*CreateContextAttribs)(
-		Display*, GLXFBConfig, GLXContext, Bool, const int*);
+	PFNGLXCREATECONTEXTATTRIBSARBPROC create_context =
+	    (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress(
+	        (const uint8_t*)"glXCreateContextAttribsARB");
 
-	CreateContextAttribs create_context =
-		(CreateContextAttribs)glXGetProcAddress(
-			(const GLubyte*)"glXCreateContextAttribsARB");
+	PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT =
+		(PFNGLXSWAPINTERVALEXTPROC) glXGetProcAddress(
+			(const uint8_t*)"glXSwapIntervalEXT");
 
-	surface->ctx = create_context(display, fb_config, 0, GL_TRUE, ctx_attrs);
+	surface->ctx = create_context(display, fb_config, 0, True, ctx_attrs);
 	if (!surface->ctx) {
 		surface->ctx =
 			glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, True);
@@ -142,6 +149,11 @@ puglX11GlCreate(PuglView* view)
 
 	if (!surface->ctx) {
 		return PUGL_CREATE_CONTEXT_FAILED;
+	}
+
+	const int swapInterval = view->hints[PUGL_SWAP_INTERVAL];
+	if (glXSwapIntervalEXT && swapInterval != PUGL_DONT_CARE) {
+		glXSwapIntervalEXT(display, impl->win, swapInterval);
 	}
 
 	glXGetConfig(impl->display,
@@ -189,20 +201,17 @@ puglX11GlLeave(PuglView* view, const PuglEventExpose* expose)
 PuglGlFunc
 puglGetProcAddress(const char* name)
 {
-	return glXGetProcAddress((const GLubyte*)name);
+	return glXGetProcAddress((const uint8_t*)name);
 }
 
 const PuglBackend* puglGlBackend(void)
 {
-	static const PuglBackend backend = {
-		puglX11GlConfigure,
-		puglX11GlCreate,
-		puglX11GlDestroy,
-		puglX11GlEnter,
-		puglX11GlLeave,
-		puglStubResize,
-		puglStubGetContext
-	};
+	static const PuglBackend backend = {puglX11GlConfigure,
+	                                    puglX11GlCreate,
+	                                    puglX11GlDestroy,
+	                                    puglX11GlEnter,
+	                                    puglX11GlLeave,
+	                                    puglStubGetContext};
 
 	return &backend;
 }

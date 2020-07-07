@@ -68,8 +68,7 @@ application and also in the same window by embedding different view objects.
     view:show()
     
     while world:hasViews() do
-        world:pollEvents()
-        world:dispatchEvents()
+        world:update()
     end
     ```
 

@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 David Robillard <http://drobilla.net>
+  Copyright 2019-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,13 +15,14 @@
 */
 
 /**
-   @file mac_cairo.m Cairo graphics backend for MacOS.
+   @file mac_cairo.m
+   @brief Cairo graphics backend for MacOS.
 */
 
 #include "pugl/detail/implementation.h"
 #include "pugl/detail/mac.h"
+#include "pugl/detail/stub.h"
 #include "pugl/pugl_cairo.h"
-#include "pugl/pugl_stub.h"
 
 #include <cairo-quartz.h>
 
@@ -33,20 +34,22 @@
 #define WITHOUT_INTERPOLATION 1
 
 @interface PuglCairoView : NSView
+@end
+
+@implementation PuglCairoView
 {
 @public
 	PuglView*        puglview;
 	cairo_surface_t* surface;
 	cairo_t*         cr;
+	CGSize           surfaceSizePx;
 }
-
-@end
-
-@implementation PuglCairoView
 
 - (id) initWithFrame:(NSRect)frame
 {
-	return (self = [super initWithFrame:frame]);
+	self = [super initWithFrame:frame];
+
+	return self;
 }
 
 - (void) resizeWithOldSuperviewSize:(NSSize)oldSize
@@ -108,7 +111,7 @@ puglMacCairoCreate(PuglView* view)
 	PuglCairoView* drawView = [PuglCairoView alloc];
 
 	drawView->puglview = view;
-	[drawView initWithFrame:NSMakeRect(0, 0, view->frame.width, view->frame.height)];
+	[drawView initWithFrame:[impl->wrapperView bounds]];
 	if (view->hints[PUGL_RESIZABLE]) {
 		[drawView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 	} else {
@@ -142,22 +145,23 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 	if (!expose || (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0)) {
 		return PUGL_SUCCESS;
 	}
+
+	const NSSize sizePt  = [drawView bounds].size;
+	const NSSize sizePx  = [drawView convertSizeToBacking: sizePt];
+        drawView->surfaceSizePx = sizePx;
+
     #if WITHOUT_INTERPOLATION
 	drawView->surface = cairo_image_surface_create (
-		CAIRO_FORMAT_RGB24, view->frame.width, view->frame.height);
+		CAIRO_FORMAT_RGB24, sizePx.width, sizePx.height);
 
 	drawView->cr = cairo_create(drawView->surface);
-	cairo_matrix_t m = {
-	    1,  0,
-	    0, -1,
-	    0, view->frame.height
-	};
-	cairo_transform(drawView->cr, &m);
     #else
 	CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+	 
+	CGContextScaleCTM(context, sizePt.width/sizePx.width, sizePt.height/sizePx.height);
 
 	drawView->surface = cairo_quartz_surface_create_for_cg_context(
-		context, view->frame.width, view->frame.height);
+		context, (unsigned)sizePx.width, (unsigned)sizePx.height);
 
 	drawView->cr = cairo_create(drawView->surface);
     #endif        
@@ -180,6 +184,8 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
             cairo_paint(drawView->cr);
 
         #if WITHOUT_INTERPOLATION
+	    const CGSize sizePx  = drawView->surfaceSizePx;
+            
             cairo_surface_flush(drawView->surface);
             
             unsigned char* surfaceData = cairo_image_surface_get_data(drawView->surface);
@@ -187,22 +193,24 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
             CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
             
             CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData, 
-                                                               view->frame.width, 
-                                                               view->frame.height,
+                                                               sizePx.width, 
+                                                               sizePx.height,
                                                                8, // bitsPerComponent
-                                                               4 * view->frame.width,// inputBytesPerRow, 
+                                                               4 * sizePx.width,// inputBytesPerRow, 
                                                                colorSpace,
                                                                kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst);
                                                                //kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault);
             CGImageRef cgImage = CGBitmapContextCreateImage(bitmapContext);
             {
+	        const NSSize sizePt  = [drawView bounds].size;
                 CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
-                //CGContextSetRenderingIntent(context, kCGRenderingIntentDefault);
                 CGContextSetInterpolationQuality(context, kCGInterpolationNone);
-                //CGContextTranslateCTM(context, 0, view->frame.height);
-                //CGContextScaleCTM(context, 1.0, -1.0);
+                
+                CGContextTranslateCTM(context, 0.0, sizePt.height);
+                CGContextScaleCTM(context, 1, -1);
+                
                 CGContextDrawImage(context, 
-                                   CGRectMake(0,0,view->frame.width,view->frame.height), 
+                                   [drawView bounds], 
                                    cgImage);
             }
             CGImageRelease(cgImage);
@@ -232,15 +240,12 @@ puglCairoBackendGetNativeWorld(PuglWorld* PUGL_UNUSED(world))
 
 const PuglBackend* puglCairoBackend(void)
 {
-	static const PuglBackend backend = {
-		puglStubConfigure,
-		puglMacCairoCreate,
-		puglMacCairoDestroy,
-		puglMacCairoEnter,
-		puglMacCairoLeave,
-		puglStubResize,
-		puglMacCairoGetContext
-	};
+	static const PuglBackend backend = {puglStubConfigure,
+	                                    puglMacCairoCreate,
+	                                    puglMacCairoDestroy,
+	                                    puglMacCairoEnter,
+	                                    puglMacCairoLeave,
+	                                    puglMacCairoGetContext};
 
 	return &backend;
 }

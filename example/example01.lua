@@ -30,6 +30,5 @@ end)
 view:show()
 
 while world:hasViews() do
-    world:pollEvents()
-    world:dispatchEvents()
+    world:update()
 end

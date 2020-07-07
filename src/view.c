@@ -23,6 +23,12 @@ typedef struct ViewUserData {
     PuglView*     puglView;
     int           eventFuncNargs;
     bool          drawing;
+
+    bool               pendingCreate;
+    PuglEventConfigure pendingConfigure;
+    bool               ignoreExpose;
+    bool               pendingExpose;
+    
 } ViewUserData;
 
 /* ============================================================================================ */
@@ -148,6 +154,8 @@ static int convertUnicodeCharToUtf8(uint32_t c, char* rsltBuffer)
 
 /* ============================================================================================ */
 
+static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world);
+
 PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
 {
     ViewUserData* udata = puglGetHandle(view);
@@ -162,10 +170,46 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
     }
 
     int nargs = udata->eventFuncNargs;
-    if (nargs < 0) {
+    if (nargs < 0) { // missing event handling function
+        switch (event->type) {
+            case PUGL_CREATE:    udata->pendingCreate = true;              
+                                 break;
+            case PUGL_CONFIGURE: udata->pendingConfigure = event->configure; 
+                                 break;
+            case PUGL_EXPOSE:    udata->pendingExpose = true;
+                                 udata->ignoreExpose = (event->expose.count != 0);
+                                 break;
+            default:             break;
+        }
         return PUGL_SUCCESS;
     }
-    
+    if (udata->pendingCreate) {
+        PuglEventAny ev = {PUGL_CREATE, 0};
+        puglEnterContext(view, false);
+        handleEvent(view, (PuglEvent*)&ev, udata, world);
+        puglLeaveContext(view, false);
+        udata->pendingCreate = false;
+    }
+    if (udata->pendingConfigure.type == PUGL_CONFIGURE) {
+        handleEvent(view, (PuglEvent*)&udata->pendingConfigure, udata, world);
+        udata->pendingConfigure.type = PUGL_NOTHING;
+    }
+    if (udata->ignoreExpose && event->type == PUGL_EXPOSE) {
+        if (event->expose.count == 0) {
+            udata->ignoreExpose = false;
+        } else {
+            return PUGL_SUCCESS;
+        }
+    }
+    if (!udata->ignoreExpose && udata->pendingExpose) {
+        puglPostRedisplay(view);
+        udata->pendingExpose = false;
+    }
+    return handleEvent(view, event, udata, world);
+}
+   
+static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world)
+{
     bool wasInCallback = world->inCallback;
     world->inCallback = true;
 
@@ -187,24 +231,32 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
     
     const char* eventName = NULL;
     switch (event->type) {
+        case PUGL_CREATE:             eventName = "CREATE"; break;
         case PUGL_CONFIGURE:          eventName = "CONFIGURE"; break;
         case PUGL_BUTTON_PRESS:       eventName = "BUTTON_PRESS"; break;
         case PUGL_BUTTON_RELEASE:     eventName = "BUTTON_RELEASE"; break;
         case PUGL_KEY_PRESS:          eventName = "KEY_PRESS"; break;
         case PUGL_KEY_RELEASE:        eventName = "KEY_RELEASE"; break;
-        case PUGL_ENTER_NOTIFY:       eventName = "ENTER_NOTIFY"; break;
-        case PUGL_LEAVE_NOTIFY:       eventName = "LEAVE_NOTIFY"; break;
-        case PUGL_MOTION_NOTIFY:      eventName = "MOTION_NOTIFY"; break;
+        case PUGL_POINTER_IN:         eventName = "POINTER_IN"; break;
+        case PUGL_POINTER_OUT:        eventName = "POINTER_OUT"; break;
+        case PUGL_MOTION:             eventName = "MOTION"; break;
         case PUGL_SCROLL:             eventName = "SCROLL"; break;
         case PUGL_FOCUS_IN:           eventName = "FOCUS_IN"; break;
         case PUGL_FOCUS_OUT:          eventName = "FOCUS_OUT"; break;
         case PUGL_EXPOSE:             eventName = "EXPOSE"; break;
         case PUGL_CLOSE:              eventName = "CLOSE"; break;
-        case PUGL_DESTROY:            closeView(L, udata, udataIdx); break;
+        case PUGL_MUST_FREE:          closeView(L, udata, udataIdx); break;
         case PUGL_DATA_RECEIVED:      eventName = "DATA_RECEIVED"; break;
-        default:                      eventName = NULL; break;
+        
+        case PUGL_NOTHING:
+        case PUGL_DESTROY: // TODO
+        case PUGL_MAP:  // TODO
+        case PUGL_UNMAP: // TODO
+        case PUGL_UPDATE:
+        case PUGL_CLIENT:             eventName = NULL; break;
     }
     if (eventName) {
+        int nargs = udata->eventFuncNargs;
         lua_pushcfunction(L, lpugl_world_errormsghandler);
         int msgh = lua_gettop(L);
         for (int i = 0; i <= nargs; ++i) {
@@ -248,13 +300,13 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
                 }
                 break;
             }
-            case PUGL_ENTER_NOTIFY: 
-            case PUGL_LEAVE_NOTIFY: {
+            case PUGL_POINTER_IN: 
+            case PUGL_POINTER_OUT: {
                 lua_pushinteger(L, (int)floor(event->crossing.x + 0.5)); ++nargs;
                 lua_pushinteger(L, (int)floor(event->crossing.y + 0.5)); ++nargs;
                 break;
             }
-            case PUGL_MOTION_NOTIFY: {
+            case PUGL_MOTION: {
                 lua_pushinteger(L, (int)floor(event->motion.x + 0.5)); ++nargs;
                 lua_pushinteger(L, (int)floor(event->motion.y + 0.5)); ++nargs;
                 break;
@@ -297,9 +349,7 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
                                    event->received.len); ++nargs;
                 break;
             }
-            case PUGL_NOTHING:
-            case PUGL_CLOSE:
-            case PUGL_DESTROY: 
+            default: 
                 break;
         }
         int rc = lua_pcall(L, nargs, 0, msgh);
@@ -568,7 +618,10 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     puglSetBackend(udata->puglView, backend->puglBackend);
     backend->used += 1;
     
-    bool ok = puglCreateWindow(udata->puglView, title ? title : "") == PUGL_SUCCESS;
+    if (title) {
+        puglSetWindowTitle(udata->puglView, title);
+    }
+    bool ok = puglRealize(udata->puglView) == PUGL_SUCCESS;
     if (title) free(title);
     if (!ok) {
         return lpugl_ERROR_FAILED_OPERATION(L);

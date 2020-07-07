@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 David Robillard <http://drobilla.net>
+  Copyright 2019-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,38 +15,38 @@
 */
 
 /**
-   @file mac_gl.m OpenGL graphics backend for MacOS.
+   @file mac_gl.m
+   @brief OpenGL graphics backend for MacOS.
 */
 
 #include "pugl/detail/implementation.h"
 #include "pugl/detail/mac.h"
+#include "pugl/detail/stub.h"
 #include "pugl/pugl_gl.h"
-#include "pugl/pugl_stub.h"
 
 #ifndef __MAC_10_10
 #    define NSOpenGLProfileVersion4_1Core NSOpenGLProfileVersion3_2Core
 #endif
 
 @interface PuglOpenGLView : NSOpenGLView
+@end
+
+@implementation PuglOpenGLView
 {
 @public
 	PuglView* puglview;
 }
 
-@end
-
-@implementation PuglOpenGLView
-
 - (id) initWithFrame:(NSRect)frame
 {
-	const bool compat  = puglview->hints[PUGL_USE_COMPAT_PROFILE];
-	const int  samples = puglview->hints[PUGL_SAMPLES];
-	const int  major   = puglview->hints[PUGL_CONTEXT_VERSION_MAJOR];
-	const int  profile = ((compat || major < 3)
-	                      ? NSOpenGLProfileVersionLegacy
-	                      : (major >= 4
-	                         ? NSOpenGLProfileVersion4_1Core
-	                         : NSOpenGLProfileVersion3_2Core));
+	const bool     compat  = puglview->hints[PUGL_USE_COMPAT_PROFILE];
+	const unsigned samples = (unsigned)puglview->hints[PUGL_SAMPLES];
+	const int      major   = puglview->hints[PUGL_CONTEXT_VERSION_MAJOR];
+	const unsigned profile = ((compat || major < 3)
+	                              ? NSOpenGLProfileVersionLegacy
+	                              : (major >= 4
+	                                     ? NSOpenGLProfileVersion4_1Core
+	                                     : NSOpenGLProfileVersion3_2Core));
 
 	NSOpenGLPixelFormatAttribute pixelAttribs[16] = {
 		NSOpenGLPFADoubleBuffer,
@@ -68,6 +68,8 @@
 	} else {
 		self = [super initWithFrame:frame];
 	}
+
+	[self setWantsBestResolutionOpenGLSurface:YES];
 
 	if (self) {
 		[[self openGLContext] makeCurrentContext];
@@ -118,11 +120,9 @@ puglMacGlCreate(PuglView* view)
 {
 	PuglInternals*  impl     = view->impl;
 	PuglOpenGLView* drawView = [PuglOpenGLView alloc];
-	const NSRect    rect     = NSMakeRect(
-		0, 0, view->frame.width, view->frame.height);
 
 	drawView->puglview = view;
-	[drawView initWithFrame:rect];
+	[drawView initWithFrame:[impl->wrapperView bounds]];
 	if (view->hints[PUGL_RESIZABLE]) {
 		[drawView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
 	} else {
@@ -168,16 +168,6 @@ puglMacGlLeave(PuglView* view, const PuglEventExpose* expose)
 	return PUGL_SUCCESS;
 }
 
-static PuglStatus
-puglMacGlResize(PuglView* view, int PUGL_UNUSED(width), int PUGL_UNUSED(height))
-{
-	PuglOpenGLView* const drawView = (PuglOpenGLView*)view->impl->drawView;
-
-	[drawView reshape];
-
-	return PUGL_SUCCESS;
-}
-
 PuglGlFunc
 puglGetProcAddress(const char *name)
 {
@@ -197,15 +187,12 @@ puglGetProcAddress(const char *name)
 
 const PuglBackend* puglGlBackend(void)
 {
-	static const PuglBackend backend = {
-		puglStubConfigure,
-		puglMacGlCreate,
-		puglMacGlDestroy,
-		puglMacGlEnter,
-		puglMacGlLeave,
-		puglMacGlResize,
-		puglStubGetContext
-	};
+	static const PuglBackend backend = {puglStubConfigure,
+	                                    puglMacGlCreate,
+	                                    puglMacGlDestroy,
+	                                    puglMacGlEnter,
+	                                    puglMacGlLeave,
+	                                    puglStubGetContext};
 
 	return &backend;
 }

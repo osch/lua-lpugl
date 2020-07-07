@@ -19,6 +19,7 @@
         * [world:id()](#world_id)
         * [world:newView()](#world_newView)
         * [world:hasViews()](#world_hasViews)
+        * [world:update()](#world_update)
         * [world:setProcessFunc()](#world_setProcessFunc)
         * [world:setNextProcessTime()](#world_setNextProcessTime)
         * [world:awake()](#world_awake)
@@ -38,6 +39,20 @@
         * [view:isClosed()](#view_isClosed)
    * [Backend Methods](#backend-methods)
         * [cairoBackend:getLayoutContext()](#cairoBackend_getLayoutContext)
+   * [Event Processing](#event-processing)
+        * [CONFIGURE](#event_CONFIGURE)
+        * [EXPOSE](#event_EXPOSE)
+        * [BUTTON_PRESS](#event_BUTTON_PRESS)
+        * [BUTTON_RELEASE](#event_BUTTON_RELEASE)
+        * [KEY_PRESS](#event_KEY_PRESS)
+        * [KEY_RELEASE](#event_KEY_RELEASE)
+        * [POINTER_IN](#event_POINTER_IN)
+        * [POINTER_OUT](#event_POINTER_OUT)
+        * [MOTION](#event_MOTION)
+        * [SCROLL](#event_SCROLL)
+        * [FOCUS_IN](#event_FOCUS_IN)
+        * [FOCUS_OUT](#event_FOCUS_OUT)
+        * [CLOSE](#event_CLOSE)
 
 <!-- ---------------------------------------------------------------------------------------- -->
 ##   Overview
@@ -172,7 +187,10 @@ TODO
   `**</a>
 
   Returns the world objects's id as integer. This id is unique among all world objects
-  for the whole process.
+  for the whole process. 
+  
+  The world's id can be used to trigger events for this world from concurrently running threads 
+  by invoking the functions [*lpugl:world()*](#lpugl_world) and [*world:awake()*](#world_awake).
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -209,11 +227,26 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_hasViews">**`                world:hasViews()
+* <a id="world_hasViews">**`             world:hasViews()
   `**</a>
   
   Returns *true* if there are views belonging to this world that have not been closed.
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="world_update">**`               world:update(timeout)`**
+
+   Update by processing events from the window system.
+
+   * *timeout*  - optional float, timeout in seconds  
+
+   If a positive *timeout* is given, then events will be processed for that amount of time, 
+   starting from when this function was called. If *timeout* is zero, then this function will 
+   return as soon as all events in the current event loop queue have been processed. If 
+   *timeout* is negative or not given, this function will block indefinitely until an event 
+   occurs.
+
+
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="world_setProcessFunc">**`          world:setProcessFunc(func)
@@ -231,9 +264,7 @@ TODO
   
   ```lua
   while world:hasViews() do
-      if world:pollEvents(timeoutSeconds) then
-        world:dispatchEvents()
-      end
+      world:update(timeoutSeconds)
       ... do some timer dependent processing here...
   end
   
@@ -243,7 +274,7 @@ TODO
   (on Windows per thread, on Mac per application). On these platforms event
   dispatching can occur outside your own event loop (for example on Windows: event 
   dispatching occurs when a window is dragged or resized). 
-  Also on these platforms calling *world:dispatchEvents()* will dispatch events belonging
+  Also on Mac platforms calling *world:update()* will dispatch events belonging
   to other windows that do not  belong to your Pugl world. This might be interesting if
   LPugl is used within a larger context (e.g. for a plugin GUI inside another application).
   
@@ -369,10 +400,29 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setEventFunc">**`         view:setEventFunc(func)
+* <a id="view_setEventFunc">**`         view:setEventFunc(func, ...)
   `**</a>
   
-  TODO
+  Sets an event handling function for a view.
+  
+  * *func*  - an event handling function. This function will be invoked for
+              any event that occurs for the view.
+  * *...*   - optional context parameters: these arguments are given to the event 
+              handling function for each invocation.
+
+  When an event for the view occurs, the function *func* is called with the optional
+  context parameters as first arguments. After the context parameters, the event name 
+  followed by event specific parameters is given. 
+  
+  *Example:*
+  *  if the event handling function *func* is set by the following invocation:
+      ```lua
+      view:setEventFunc(func, "foo1", "foo2")
+      ```
+      and if an mouse motion event for the view at position 100, 200 occurs, then 
+      *func* will be called with the arguments `"foo1", "foo2", "MOTION", 100, 200`
+  
+  For further details see [*Event Processing*](#event-processing).
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -412,6 +462,91 @@ TODO
 * <a id="cairoBackend_getLayoutContext">**`         cairoBackend:getLayoutContext()
   `**</a>
   
+TODO
+
+<!-- ---------------------------------------------------------------------------------------- -->
+##   Event Processing
+<!-- ---------------------------------------------------------------------------------------- -->
+
+  Events for a view object are processed by the event handling function that
+  was set with [*view:setEventFunc()*](#view_setEventFunc).
+  
+  When an event for the view occurs, the event handling function is called with the optional
+  context parameters given to [*view:setEventFunc()*](#view_setEventFunc) as first arguments. 
+  After the context parameters, the event name followed by event specific paramters is given
+  to the event handling function.
+  
+  The event handling function is called with the following possible events (event names 
+  followed by event specific parameters):
+
+* <a id="event_CONFIGURE">**`         "CONFIGURE", x, y, width, height
+  `**</a>
+
+  TODO
+  
+* <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count
+  `**</a>
+
+  TODO
+  
+* <a id="event_BUTTON_PRESS">**`      "BUTTON_PRESS", x, y, button, state
+  `**</a>
+
+  TODO
+  
+* <a id="event_BUTTON_RELEASE">**`    "BUTTON_RELEASE", x, y, button, state
+  `**</a>
+
+  TODO
+  
+* <a id="event_KEY_PRESS">**`         "KEY_PRESS", keyName, state, text
+  `**</a>
+
+  TODO
+  
+* <a id="event_KEY_RELEASE">**`       "KEY_RELEASE", keyName, state, text
+  `**</a>
+
+  TODO
+  
+* <a id="event_POINTER_IN">**`        "POINTER_IN", x, y
+  `**</a>
+
+  TODO
+  
+* <a id="event_POINTER_OUT">**`       "POINTER_OUT", x, y
+  `**</a>
+
+  TODO
+  
+* <a id="event_MOTION">**`            "MOTION", x, y
+  `**</a>
+
+  TODO
+  
+* <a id="event_SCROLL">**`            "SCROLL", dx, dy
+  `**</a>
+
+  TODO
+  
+* <a id="event_FOCUS_IN">**`          "FOCUS_IN"
+  `**</a>
+
+  TODO
+  
+* <a id="event_FOCUS_OUT">**`         "FOCUS_OUT"
+  `**</a>
+
+  TODO
+  
+* <a id="event_CLOSE">**`             "CLOSE"
+  `**</a>
+  
+  User requests to close the view. The view mustn't close. Instead the view can 
+  initiate user interactions, e.g. for saving open documents or cancelling the close
+  operation (by just ignoring the event). The view can finally be closed by calling
+  method [*view:close()*](#view_close).
+
 TODO
 
 End of document.

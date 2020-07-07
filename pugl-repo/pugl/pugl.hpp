@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,386 +15,667 @@
 */
 
 /**
-   @file pugl.hpp Pugl C++ API wrapper.
+   @file pugl.hpp
+   @brief Pugl C++ API wrapper.
 */
 
 #ifndef PUGL_PUGL_HPP
 #define PUGL_PUGL_HPP
 
 #include "pugl/pugl.h"
-#include "pugl/pugl_gl.h" // FIXME
 
+#include <cassert>
 #include <chrono>
 #include <functional>
-#include <ratio>
+#include <memory>
 #include <stdexcept>
-#include <utility>
+#include <type_traits>
 
 /**
-   @defgroup puglmm Puglmm
-   Pugl C++ API wrapper.
+   @defgroup pugl_cxx C++ API
+   C++ API wrapper.
+
+   @ingroup pugl
    @{
 */
 
+/**
+   Pugl C++ API namespace.
+*/
 namespace pugl {
 
-enum class Status {
-	success             = PUGL_SUCCESS,
-	failure             = PUGL_FAILURE,
-	unknownError        = PUGL_UNKNOWN_ERROR,
-	badBackend          = PUGL_BAD_BACKEND,
-	backendFailed       = PUGL_BACKEND_FAILED,
-	registrationFailed  = PUGL_REGISTRATION_FAILED,
-	createWindowFailed  = PUGL_CREATE_WINDOW_FAILED,
-	setFormatFailed     = PUGL_SET_FORMAT_FAILED,
-	createContextFailed = PUGL_CREATE_CONTEXT_FAILED,
-	unsupportedType     = PUGL_UNSUPPORTED_TYPE,
+namespace detail {
+
+/// Free function for a C object
+template<typename T>
+using FreeFunc = void (*)(T*);
+
+/// Simple overhead-free deleter for a C object
+template<typename T, FreeFunc<T> Free>
+struct Deleter {
+	void operator()(T* ptr) { Free(ptr); }
 };
 
-using ViewHint     = PuglViewHint;
-using Rect         = PuglRect;
-using NativeWindow = PuglNativeWindow;
-using GlFunc       = PuglGlFunc;
-using Event        = PuglEvent;
-
-template <PuglEventType t, class Base>
-struct TypedEvent : public Base
+/// Generic C++ wrapper for a C object
+template<class T, FreeFunc<T> Free>
+class Wrapper
 {
+public:
+	T*       cobj() { return _ptr.get(); }
+	const T* cobj() const { return _ptr.get(); }
+
+protected:
+	explicit Wrapper(T* ptr)
+	    : _ptr(ptr, Deleter<T, Free>{})
+	{}
+
+private:
+	std::unique_ptr<T, Deleter<T, Free>> _ptr;
+};
+
+} // namespace detail
+
+using Rect = PuglRect; ///< @copydoc PuglRect
+
+/**
+   @defgroup eventsxx Events
+   @ingroup pugl_cxx
+   @copydoc events
+   @{
+*/
+
+/**
+   A strongly-typed analogue of PuglEvent.
+
+   This is bit-for-bit identical to the corresponding PuglEvent, so events are
+   simply cast to this type to avoid any copying overhead.
+
+   @tparam t The `type` field of the corresponding PuglEvent.
+
+   @tparam Base The specific struct type of the corresponding PuglEvent.
+*/
+template<PuglEventType t, class Base>
+struct Event final : Base {
+	using BaseEvent = Base;
+
 	static constexpr const PuglEventType type = t;
 };
 
-using ButtonPressEvent   = TypedEvent<PUGL_BUTTON_PRESS, PuglEventButton>;
-using ButtonReleaseEvent = TypedEvent<PUGL_BUTTON_RELEASE, PuglEventButton>;
-using ConfigureEvent     = TypedEvent<PUGL_CONFIGURE, PuglEventConfigure>;
-using ExposeEvent        = TypedEvent<PUGL_EXPOSE, PuglEventExpose>;
-using CloseEvent         = TypedEvent<PUGL_CLOSE, PuglEventClose>;
-using KeyPressEvent      = TypedEvent<PUGL_KEY_PRESS, PuglEventKey>;
-using KeyReleaseEvent    = TypedEvent<PUGL_KEY_RELEASE, PuglEventKey>;
-using TextEvent          = TypedEvent<PUGL_TEXT, PuglEventText>;
-using EnterEvent         = TypedEvent<PUGL_ENTER_NOTIFY, PuglEventCrossing>;
-using LeaveEvent         = TypedEvent<PUGL_LEAVE_NOTIFY, PuglEventCrossing>;
-using MotionEvent        = TypedEvent<PUGL_MOTION_NOTIFY, PuglEventMotion>;
-using ScrollEvent        = TypedEvent<PUGL_SCROLL, PuglEventScroll>;
-using FocusInEvent       = TypedEvent<PUGL_FOCUS_IN, PuglEventFocus>;
-using FocusOutEvent      = TypedEvent<PUGL_FOCUS_OUT, PuglEventFocus>;
+using Mod          = PuglMod;          ///< @copydoc PuglMod
+using Mods         = PuglMods;         ///< @copydoc PuglMods
+using Key          = PuglKey;          ///< @copydoc PuglKey
+using EventType    = PuglEventType;    ///< @copydoc PuglEventType
+using EventFlag    = PuglEventFlag;    ///< @copydoc PuglEventFlag
+using EventFlags   = PuglEventFlags;   ///< @copydoc PuglEventFlags
+using CrossingMode = PuglCrossingMode; ///< @copydoc PuglCrossingMode
 
+/// @copydoc PuglEventCreate
+using CreateEvent = Event<PUGL_CREATE, PuglEventCreate>;
+
+/// @copydoc PuglEventDestroy
+using DestroyEvent = Event<PUGL_DESTROY, PuglEventDestroy>;
+
+/// @copydoc PuglEventConfigure
+using ConfigureEvent = Event<PUGL_CONFIGURE, PuglEventConfigure>;
+
+/// @copydoc PuglEventMap
+using MapEvent = Event<PUGL_MAP, PuglEventMap>;
+
+/// @copydoc PuglEventUnmap
+using UnmapEvent = Event<PUGL_UNMAP, PuglEventUnmap>;
+
+/// @copydoc PuglEventUpdate
+using UpdateEvent = Event<PUGL_UPDATE, PuglEventUpdate>;
+
+/// @copydoc PuglEventExpose
+using ExposeEvent = Event<PUGL_EXPOSE, PuglEventExpose>;
+
+/// @copydoc PuglEventClose
+using CloseEvent = Event<PUGL_CLOSE, PuglEventClose>;
+
+/// @copydoc PuglEventFocus
+using FocusInEvent = Event<PUGL_FOCUS_IN, PuglEventFocus>;
+
+/// @copydoc PuglEventFocus
+using FocusOutEvent = Event<PUGL_FOCUS_OUT, PuglEventFocus>;
+
+/// @copydoc PuglEventKey
+using KeyPressEvent = Event<PUGL_KEY_PRESS, PuglEventKey>;
+
+/// @copydoc PuglEventKey
+using KeyReleaseEvent = Event<PUGL_KEY_RELEASE, PuglEventKey>;
+
+/// @copydoc PuglEventText
+using TextEvent = Event<PUGL_TEXT, PuglEventText>;
+
+/// @copydoc PuglEventCrossing
+using PointerInEvent = Event<PUGL_POINTER_IN, PuglEventCrossing>;
+
+/// @copydoc PuglEventCrossing
+using PointerOutEvent = Event<PUGL_POINTER_OUT, PuglEventCrossing>;
+
+/// @copydoc PuglEventButton
+using ButtonPressEvent = Event<PUGL_BUTTON_PRESS, PuglEventButton>;
+
+/// @copydoc PuglEventButton
+using ButtonReleaseEvent = Event<PUGL_BUTTON_RELEASE, PuglEventButton>;
+
+/// @copydoc PuglEventMotion
+using MotionEvent = Event<PUGL_MOTION, PuglEventMotion>;
+
+/// @copydoc PuglEventScroll
+using ScrollEvent = Event<PUGL_SCROLL, PuglEventScroll>;
+
+/// @copydoc PuglEventClient
+using ClientEvent = Event<PUGL_CLIENT, PuglEventClient>;
+
+/// @copydoc PuglEventTimer
+using TimerEvent = Event<PUGL_TIMER, PuglEventTimer>;
+
+/**
+   @}
+   @defgroup statusxx Status
+   @ingroup pugl_cxx
+   @copydoc status
+   @{
+*/
+
+/// @copydoc PuglStatus
+enum class Status {
+	success,             ///< @copydoc PUGL_SUCCESS
+	failure,             ///< @copydoc PUGL_FAILURE
+	unknownError,        ///< @copydoc PUGL_UNKNOWN_ERROR
+	badBackend,          ///< @copydoc PUGL_BAD_BACKEND
+	badConfiguration,    ///< @copydoc PUGL_BAD_CONFIGURATION
+	badParameter,        ///< @copydoc PUGL_BAD_PARAMETER
+	backendFailed,       ///< @copydoc PUGL_BACKEND_FAILED
+	registrationFailed,  ///< @copydoc PUGL_REGISTRATION_FAILED
+	realizeFailed,       ///< @copydoc PUGL_REALIZE_FAILED
+	setFormatFailed,     ///< @copydoc PUGL_SET_FORMAT_FAILED
+	createContextFailed, ///< @copydoc PUGL_CREATE_CONTEXT_FAILED
+	unsupportedType,     ///< @copydoc PUGL_UNSUPPORTED_TYPE
+};
+
+static_assert(Status(PUGL_UNSUPPORTED_TYPE) == Status::unsupportedType, "");
+
+/// @copydoc puglStrerror
 static inline const char*
-strerror(pugl::Status status)
+strerror(const pugl::Status status)
 {
 	return puglStrerror(static_cast<PuglStatus>(status));
 }
 
-static inline GlFunc
-getProcAddress(const char* name)
-{
-	return puglGetProcAddress(name);
-}
+/**
+   @}
+   @defgroup worldxx World
+   @ingroup pugl_cxx
+   @copydoc world
+   @{
+*/
 
 class World;
 
+/// @copydoc PuglWorldType
+enum class WorldType {
+	program, ///< @copydoc PUGL_PROGRAM
+	module,  ///< @copydoc PUGL_MODULE
+};
+
+static_assert(WorldType(PUGL_MODULE) == WorldType::module, "");
+
+/// @copydoc PuglWorldFlag
+enum class WorldFlag {
+	threads = PUGL_WORLD_THREADS, ///< @copydoc PUGL_WORLD_THREADS
+};
+
+static_assert(WorldFlag(PUGL_WORLD_THREADS) == WorldFlag::threads, "");
+
+using WorldFlags = PuglWorldFlags; ///< @copydoc PuglWorldFlags
+
+/// @copydoc PuglLogLevel
+enum class LogLevel {
+	err     = PUGL_LOG_LEVEL_ERR,     ///< @copydoc PUGL_LOG_LEVEL_ERR
+	warning = PUGL_LOG_LEVEL_WARNING, ///< @copydoc PUGL_LOG_LEVEL_WARNING
+	info    = PUGL_LOG_LEVEL_INFO,    ///< @copydoc PUGL_LOG_LEVEL_INFO
+	debug   = PUGL_LOG_LEVEL_DEBUG,   ///< @copydoc PUGL_LOG_LEVEL_DEBUG
+};
+
+static_assert(LogLevel(PUGL_LOG_LEVEL_DEBUG) == LogLevel::debug, "");
+
+/// @copydoc PuglLogFunc
+using LogFunc =
+    std::function<void(World& world, LogLevel level, const char* msg)>;
+
+/**
+   A `std::chrono` compatible clock that uses Pugl time.
+*/
 class Clock
 {
 public:
-	using rep        = double;
-	using period     = std::ratio<1>;
-	using duration   = std::chrono::duration<double>;
-	using time_point = std::chrono::time_point<Clock>;
+	using rep        = double;                         ///< Time representation
+	using duration   = std::chrono::duration<double>;  ///< Duration in seconds
+	using time_point = std::chrono::time_point<Clock>; ///< A Pugl time point
 
-	static constexpr bool is_steady = true;
+	static constexpr bool is_steady = true; ///< Steady clock flag, always true
 
-	explicit Clock(World& world) : _world{world} {}
+	/// Construct a clock that uses time from puglGetTime()
+	explicit Clock(World& world)
+	    : _world{world}
+	{}
 
+	/// Return the current time
 	time_point now() const;
 
 private:
 	const pugl::World& _world;
 };
 
-class World
+/// @copydoc PuglWorld
+class World : public detail::Wrapper<PuglWorld, puglFreeWorld>
 {
 public:
-	World() : _clock(*this), _world(puglNewWorld())
+	explicit World(WorldType type, WorldFlags flags = {})
+	    : Wrapper{puglNewWorld(static_cast<PuglWorldType>(type), flags)}
+	    , _clock(*this)
 	{
-		if (!_world) {
+		if (!cobj()) {
 			throw std::runtime_error("Failed to create pugl::World");
 		}
 	}
 
-	~World() { puglFreeWorld(_world); }
+	/// @copydoc puglGetNativeWorld
+	void* nativeWorld() { return puglGetNativeWorld(cobj()); }
 
-	World(const World&) = delete;
-	World& operator=(const World&) = delete;
-	World(World&&)                 = delete;
-	World&& operator=(World&&) = delete;
+	// TODO: setLogFunc
 
+	Status setLogLevel(const LogLevel level)
+	{
+		return static_cast<Status>(
+		    puglSetLogLevel(cobj(), static_cast<PuglLogLevel>(level)));
+	}
+
+	/// @copydoc puglSetClassName
 	Status setClassName(const char* const name)
 	{
-		return static_cast<Status>(puglSetClassName(_world, name));
+		return static_cast<Status>(puglSetClassName(cobj(), name));
 	}
 
-	double getTime() const { return puglGetTime(_world); }
+	/// @copydoc puglGetTime
+	double time() const { return puglGetTime(cobj()); }
 
-	Status pollEvents(const double timeout)
+	/// @copydoc puglUpdate
+	Status update(const double timeout)
 	{
-		return static_cast<Status>(puglPollEvents(_world, timeout));
+		return static_cast<Status>(puglUpdate(cobj(), timeout));
 	}
 
-	Status dispatchEvents()
-	{
-		return static_cast<Status>(puglDispatchEvents(_world));
-	}
-
-	const PuglWorld* cobj() const { return _world; }
-	PuglWorld*       cobj() { return _world; }
-
+	/// Return a clock that uses Pugl time
 	const Clock& clock() { return _clock; }
 
 private:
-	Clock            _clock;
-	PuglWorld* const _world;
+	Clock _clock;
 };
 
 inline Clock::time_point
 Clock::now() const
 {
-	return time_point{duration{_world.getTime()}};
+	return time_point{duration{_world.time()}};
 }
 
-class ViewBase
+/**
+   @}
+   @defgroup viewxx View
+   @ingroup pugl_cxx
+   @copydoc view
+   @{
+*/
+
+using Backend    = PuglBackend;    ///< @copydoc PuglBackend
+using NativeView = PuglNativeView; ///< @copydoc PuglNativeView
+
+/// @copydoc PuglViewHint
+enum class ViewHint {
+	useCompatProfile,    ///< @copydoc PUGL_USE_COMPAT_PROFILE
+	useDebugContext,     ///< @copydoc PUGL_USE_DEBUG_CONTEXT
+	contextVersionMajor, ///< @copydoc PUGL_CONTEXT_VERSION_MAJOR
+	contextVersionMinor, ///< @copydoc PUGL_CONTEXT_VERSION_MINOR
+	redBits,             ///< @copydoc PUGL_RED_BITS
+	greenBits,           ///< @copydoc PUGL_GREEN_BITS
+	blueBits,            ///< @copydoc PUGL_BLUE_BITS
+	alphaBits,           ///< @copydoc PUGL_ALPHA_BITS
+	depthBits,           ///< @copydoc PUGL_DEPTH_BITS
+	stencilBits,         ///< @copydoc PUGL_STENCIL_BITS
+	samples,             ///< @copydoc PUGL_SAMPLES
+	doubleBuffer,        ///< @copydoc PUGL_DOUBLE_BUFFER
+	swapInterval,        ///< @copydoc PUGL_SWAP_INTERVAL
+	resizable,           ///< @copydoc PUGL_RESIZABLE
+	ignoreKeyRepeat,     ///< @copydoc PUGL_IGNORE_KEY_REPEAT
+};
+
+static_assert(ViewHint(PUGL_IGNORE_KEY_REPEAT) == ViewHint::ignoreKeyRepeat,
+              "");
+
+using ViewHintValue = PuglViewHintValue; ///< @copydoc PuglViewHintValue
+
+/// @copydoc PuglCursor
+enum class Cursor {
+	arrow,     ///< @copydoc PUGL_CURSOR_ARROW
+	caret,     ///< @copydoc PUGL_CURSOR_CARET
+	crosshair, ///< @copydoc PUGL_CURSOR_CROSSHAIR
+	hand,      ///< @copydoc PUGL_CURSOR_HAND
+	no,        ///< @copydoc PUGL_CURSOR_NO
+	leftRight, ///< @copydoc PUGL_CURSOR_LEFT_RIGHT
+	upDown,    ///< @copydoc PUGL_CURSOR_UP_DOWN
+};
+
+static_assert(Cursor(PUGL_CURSOR_UP_DOWN) == Cursor::upDown, "");
+
+/// @copydoc PuglView
+class View : protected detail::Wrapper<PuglView, puglFreeView>
 {
 public:
-	explicit ViewBase(World& world)
-	    : _world(world), _view(puglNewView(world.cobj()))
+	/**
+	   @name Setup
+	   Methods for creating and destroying a view.
+	   @{
+	*/
+
+	explicit View(World& world)
+	    : Wrapper{puglNewView(world.cobj())}
+	    , _world(world)
 	{
-		if (!_view) {
+		if (!cobj()) {
 			throw std::runtime_error("Failed to create pugl::View");
 		}
 
-		puglSetHandle(_view, this);
+		puglSetHandle(cobj(), this);
+		puglSetEventFunc(cobj(), dispatchEvent);
 	}
 
-	~ViewBase() { puglFreeView(_view); }
+	virtual ~View() = default;
 
-	ViewBase(const ViewBase&) = delete;
-	ViewBase(ViewBase&&)      = delete;
-	ViewBase&  operator=(const ViewBase&) = delete;
-	ViewBase&& operator=(ViewBase&&) = delete;
+	const pugl::World& world() const { return _world; }
+	pugl::World&       world() { return _world; }
 
+	/// @copydoc puglSetViewHint
 	Status setHint(ViewHint hint, int value)
 	{
-		return static_cast<Status>(puglSetViewHint(_view, hint, value));
+		return static_cast<Status>(
+		    puglSetViewHint(cobj(), static_cast<PuglViewHint>(hint), value));
 	}
 
-	bool getVisible() const { return puglGetVisible(_view); }
+	/**
+	   @}
+	   @name Frame
+	   Methods for working with the position and size of a view.
+	   @{
+	*/
 
-	Status postRedisplay()
-	{
-		return static_cast<Status>(puglPostRedisplay(_view));
-	}
+	/// @copydoc puglGetFrame
+	Rect frame() const { return puglGetFrame(cobj()); }
 
-	const pugl::World& getWorld() const { return _world; }
-	pugl::World&       getWorld() { return _world; }
-
-	Rect getFrame() const { return puglGetFrame(_view); }
-
+	/// @copydoc puglSetFrame
 	Status setFrame(Rect frame)
 	{
-		return static_cast<Status>(puglSetFrame(_view, frame));
+		return static_cast<Status>(puglSetFrame(cobj(), frame));
 	}
 
+	/// @copydoc puglSetDefaultSize
+	Status setDefaultSize(int width, int height)
+	{
+		return static_cast<Status>(puglSetDefaultSize(cobj(), width, height));
+	}
+
+	/// @copydoc puglSetMinSize
 	Status setMinSize(int width, int height)
 	{
-		return static_cast<Status>(puglSetMinSize(_view, width, height));
+		return static_cast<Status>(puglSetMinSize(cobj(), width, height));
 	}
 
+	/// @copydoc puglSetMaxSize
+	Status setMaxSize(int width, int height)
+	{
+		return static_cast<Status>(puglSetMaxSize(cobj(), width, height));
+	}
+
+	/// @copydoc puglSetAspectRatio
 	Status setAspectRatio(int minX, int minY, int maxX, int maxY)
 	{
 		return static_cast<Status>(
-		        puglSetAspectRatio(_view, minX, minY, maxX, maxY));
+		    puglSetAspectRatio(cobj(), minX, minY, maxX, maxY));
 	}
 
+	/**
+	   @}
+	   @name Windows
+	   Methods for working with top-level windows.
+	   @{
+	*/
+
+	/// @copydoc puglSetWindowTitle
 	Status setWindowTitle(const char* title)
 	{
-		return static_cast<Status>(puglSetWindowTitle(_view, title));
+		return static_cast<Status>(puglSetWindowTitle(cobj(), title));
 	}
 
-	Status setParentWindow(NativeWindow parent)
+	/// @copydoc puglSetParentWindow
+	Status setParentWindow(NativeView parent)
 	{
-		return static_cast<Status>(puglSetParentWindow(_view, parent));
+		return static_cast<Status>(puglSetParentWindow(cobj(), parent));
 	}
 
-	Status setTransientFor(NativeWindow parent)
+	/// @copydoc puglSetTransientFor
+	Status setTransientFor(NativeView parent)
 	{
-		return static_cast<Status>(puglSetTransientFor(_view, parent));
+		return static_cast<Status>(puglSetTransientFor(cobj(), parent));
 	}
 
-	Status createWindow(const char* title)
+	/// @copydoc puglRealize
+	Status realize() { return static_cast<Status>(puglRealize(cobj())); }
+
+	/// @copydoc puglShowWindow
+	Status showWindow() { return static_cast<Status>(puglShowWindow(cobj())); }
+
+	/// @copydoc puglHideWindow
+	Status hideWindow() { return static_cast<Status>(puglHideWindow(cobj())); }
+
+	/// @copydoc puglGetVisible
+	bool visible() const { return puglGetVisible(cobj()); }
+
+	/// @copydoc puglGetNativeWindow
+	NativeView nativeWindow() { return puglGetNativeWindow(cobj()); }
+
+	/**
+	   @}
+	   @name Graphics
+	   Methods for working with the graphics context and scheduling
+	   redisplays.
+	   @{
+	*/
+
+	/// @copydoc puglGetContext
+	void* context() { return puglGetContext(cobj()); }
+
+	/// @copydoc puglPostRedisplay
+	Status postRedisplay()
 	{
-		return static_cast<Status>(puglCreateWindow(_view, title));
+		return static_cast<Status>(puglPostRedisplay(cobj()));
 	}
 
-	Status showWindow() { return static_cast<Status>(puglShowWindow(_view)); }
+	/// @copydoc puglPostRedisplayRect
+	Status postRedisplayRect(const Rect rect)
+	{
+		return static_cast<Status>(puglPostRedisplayRect(cobj(), rect));
+	}
 
-	Status hideWindow() { return static_cast<Status>(puglHideWindow(_view)); }
+	/**
+	   @}
+	   @name Interaction
+	   Methods for interacting with the user and window system.
+	   @{
+	*/
 
-	NativeWindow getNativeWindow() { return puglGetNativeWindow(_view); }
+	/// @copydoc puglGrabFocus
+	Status grabFocus() { return static_cast<Status>(puglGrabFocus(cobj())); }
 
+	/// @copydoc puglHasFocus
+	bool hasFocus() const { return puglHasFocus(cobj()); }
+
+	/// @copydoc puglSetBackend
 	Status setBackend(const PuglBackend* backend)
 	{
-		return static_cast<Status>(puglSetBackend(_view, backend));
+		return static_cast<Status>(puglSetBackend(cobj(), backend));
 	}
 
-	void* getContext() { return puglGetContext(_view); }
+	/// @copydoc puglSetCursor
+	Status setCursor(const Cursor cursor)
+	{
+		return static_cast<Status>(
+		    puglSetCursor(cobj(), static_cast<PuglCursor>(cursor)));
+	}
 
-	void enterContext(bool drawing) { puglEnterContext(_view, drawing); }
-	void leaveContext(bool drawing) { puglLeaveContext(_view, drawing); }
-
-	bool hasFocus() const { return puglHasFocus(_view); }
-
-	Status grabFocus() { return static_cast<Status>(puglGrabFocus(_view)); }
-
+	/// @copydoc puglRequestAttention
 	Status requestAttention()
 	{
-		return static_cast<Status>(puglRequestAttention(_view));
+		return static_cast<Status>(puglRequestAttention(cobj()));
 	}
 
-	PuglView* cobj() { return _view; }
+	/**
+	   @}
+	   @name Event Handlers
+	   Methods called when events are dispatched to the view.
+	   @{
+	*/
 
-protected:
-	World&    _world;
-	PuglView* _view;
-};
+	virtual Status onCreate(const CreateEvent&) PUGL_CONST_FUNC;
+	virtual Status onDestroy(const DestroyEvent&) PUGL_CONST_FUNC;
+	virtual Status onConfigure(const ConfigureEvent&) PUGL_CONST_FUNC;
+	virtual Status onMap(const MapEvent&) PUGL_CONST_FUNC;
+	virtual Status onUnmap(const UnmapEvent&) PUGL_CONST_FUNC;
+	virtual Status onUpdate(const UpdateEvent&) PUGL_CONST_FUNC;
+	virtual Status onExpose(const ExposeEvent&) PUGL_CONST_FUNC;
+	virtual Status onClose(const CloseEvent&) PUGL_CONST_FUNC;
+	virtual Status onFocusIn(const FocusInEvent&) PUGL_CONST_FUNC;
+	virtual Status onFocusOut(const FocusOutEvent&) PUGL_CONST_FUNC;
+	virtual Status onKeyPress(const KeyPressEvent&) PUGL_CONST_FUNC;
+	virtual Status onKeyRelease(const KeyReleaseEvent&) PUGL_CONST_FUNC;
+	virtual Status onText(const TextEvent&) PUGL_CONST_FUNC;
+	virtual Status onPointerIn(const PointerInEvent&) PUGL_CONST_FUNC;
+	virtual Status onPointerOut(const PointerOutEvent&) PUGL_CONST_FUNC;
+	virtual Status onButtonPress(const ButtonPressEvent&) PUGL_CONST_FUNC;
+	virtual Status onButtonRelease(const ButtonReleaseEvent&) PUGL_CONST_FUNC;
+	virtual Status onMotion(const MotionEvent&) PUGL_CONST_FUNC;
+	virtual Status onScroll(const ScrollEvent&) PUGL_CONST_FUNC;
+	virtual Status onClient(const ClientEvent&) PUGL_CONST_FUNC;
+	virtual Status onTimer(const TimerEvent&) PUGL_CONST_FUNC;
 
-template <typename Data>
-class View : public ViewBase
-{
-public:
-	template <class E>
-	using TypedEventFunc = std::function<pugl::Status(View&, const E&)>;
+	/**
+	   @}
+	*/
 
-	using NothingEvent = TypedEvent<PUGL_NOTHING, PuglEvent>;
-
-	using EventFuncs = std::tuple<TypedEventFunc<NothingEvent>,
-	                              TypedEventFunc<ButtonPressEvent>,
-	                              TypedEventFunc<ButtonReleaseEvent>,
-	                              TypedEventFunc<ConfigureEvent>,
-	                              TypedEventFunc<ExposeEvent>,
-	                              TypedEventFunc<CloseEvent>,
-	                              TypedEventFunc<KeyPressEvent>,
-	                              TypedEventFunc<KeyReleaseEvent>,
-	                              TypedEventFunc<TextEvent>,
-	                              TypedEventFunc<EnterEvent>,
-	                              TypedEventFunc<LeaveEvent>,
-	                              TypedEventFunc<MotionEvent>,
-	                              TypedEventFunc<ScrollEvent>,
-	                              TypedEventFunc<FocusInEvent>,
-	                              TypedEventFunc<FocusOutEvent>>;
-
-	using EventFunc = std::function<pugl::Status(View&, const PuglEvent&)>;
-
-	explicit View(World& world) : ViewBase{world}, _data{}
-	{
-		puglSetEventFunc(_view, _onEvent);
-	}
-
-	View(World& world, Data data) : ViewBase{world}, _data{data}
-	{
-		puglSetEventFunc(_view, _onEvent);
-	}
-
-	template <class HandledEvent>
-	Status setEventFunc(
-	        std::function<pugl::Status(View&, const HandledEvent&)> handler)
-	{
-		std::get<HandledEvent::type>(_eventFuncs) = handler;
-
-		return Status::success;
-	}
-
-	template <class HandledEvent>
-	Status setEventFunc(pugl::Status (*handler)(View&, const HandledEvent&))
-	{
-		std::get<HandledEvent::type>(_eventFuncs) = handler;
-
-		return Status::success;
-	}
-
-	const Data& getData() const { return _data; }
-	Data&       getData() { return _data; }
+	PuglView*       cobj() { return Wrapper::cobj(); }
+	const PuglView* cobj() const { return Wrapper::cobj(); }
 
 private:
-	static PuglStatus _onEvent(PuglView* view, const PuglEvent* event)
+	template<class Typed, class Base>
+	static const Typed& typedEventRef(const Base& base)
 	{
-		View* self = static_cast<View*>(puglGetHandle(view));
-
-		return static_cast<PuglStatus>(self->dispatchEvent(*event));
+		const Typed& event = static_cast<const Typed&>(base);
+		static_assert(sizeof(event) == sizeof(typename Typed::BaseEvent), "");
+		static_assert(std::is_standard_layout<Typed>::value, "");
+		assert(event.type == Typed::type);
+		return event;
 	}
 
-	Status dispatchEvent(const PuglEvent& event)
+	static PuglStatus dispatchEvent(PuglView* view, const PuglEvent* event) noexcept {
+		try {
+			View* self = static_cast<View*>(puglGetHandle(view));
+
+			return self->dispatch(event);
+		} catch (...) {
+			return PUGL_UNKNOWN_ERROR;
+		}
+	}
+
+	PuglStatus dispatch(const PuglEvent* event)
 	{
-		switch (event.type) {
-		case PUGL_NOTHING: return Status::success;
-		case PUGL_BUTTON_PRESS:
-			return dispatchTypedEvent(
-			        static_cast<const ButtonPressEvent&>(event.button));
-		case PUGL_BUTTON_RELEASE:
-			return dispatchTypedEvent(
-			        static_cast<const ButtonReleaseEvent&>(event.button));
+		switch (event->type) {
+		case PUGL_NOTHING:
+			return PUGL_SUCCESS;
+		case PUGL_CREATE:
+			return static_cast<PuglStatus>(
+			    onCreate(typedEventRef<CreateEvent>(event->any)));
+		case PUGL_DESTROY:
+			return static_cast<PuglStatus>(
+			    onDestroy(typedEventRef<DestroyEvent>(event->any)));
 		case PUGL_CONFIGURE:
-			return dispatchTypedEvent(
-			        static_cast<const ConfigureEvent&>(event.configure));
+			return static_cast<PuglStatus>(onConfigure(
+			    typedEventRef<ConfigureEvent>(event->configure)));
+		case PUGL_MAP:
+			return static_cast<PuglStatus>(
+			    onMap(typedEventRef<MapEvent>(event->any)));
+		case PUGL_UNMAP:
+			return static_cast<PuglStatus>(
+			    onUnmap(typedEventRef<UnmapEvent>(event->any)));
+		case PUGL_UPDATE:
+			return static_cast<PuglStatus>(
+			    onUpdate(typedEventRef<UpdateEvent>(event->any)));
 		case PUGL_EXPOSE:
-			return dispatchTypedEvent(
-			        static_cast<const ExposeEvent&>(event.expose));
+			return static_cast<PuglStatus>(
+			    onExpose(typedEventRef<ExposeEvent>(event->expose)));
 		case PUGL_CLOSE:
-			return dispatchTypedEvent(
-			        static_cast<const CloseEvent&>(event.close));
-		case PUGL_KEY_PRESS:
-			return dispatchTypedEvent(
-			        static_cast<const KeyPressEvent&>(event.key));
-		case PUGL_KEY_RELEASE:
-			return dispatchTypedEvent(
-			        static_cast<const KeyReleaseEvent&>(event.key));
-		case PUGL_TEXT:
-			return dispatchTypedEvent(
-			        static_cast<const TextEvent&>(event.text));
-		case PUGL_ENTER_NOTIFY:
-			return dispatchTypedEvent(
-			        static_cast<const EnterEvent&>(event.crossing));
-		case PUGL_LEAVE_NOTIFY:
-			return dispatchTypedEvent(
-			        static_cast<const LeaveEvent&>(event.crossing));
-		case PUGL_MOTION_NOTIFY:
-			return dispatchTypedEvent(
-			        static_cast<const MotionEvent&>(event.motion));
-		case PUGL_SCROLL:
-			return dispatchTypedEvent(
-			        static_cast<const ScrollEvent&>(event.scroll));
+			return static_cast<PuglStatus>(
+			    onClose(typedEventRef<CloseEvent>(event->any)));
 		case PUGL_FOCUS_IN:
-			return dispatchTypedEvent(
-			        static_cast<const FocusInEvent&>(event.focus));
+			return static_cast<PuglStatus>(
+			    onFocusIn(typedEventRef<FocusInEvent>(event->focus)));
 		case PUGL_FOCUS_OUT:
-			return dispatchTypedEvent(
-			        static_cast<const FocusOutEvent&>(event.focus));
+			return static_cast<PuglStatus>(
+			    onFocusOut(typedEventRef<FocusOutEvent>(event->focus)));
+		case PUGL_KEY_PRESS:
+			return static_cast<PuglStatus>(
+			    onKeyPress(typedEventRef<KeyPressEvent>(event->key)));
+		case PUGL_KEY_RELEASE:
+			return static_cast<PuglStatus>(
+			    onKeyRelease(typedEventRef<KeyReleaseEvent>(event->key)));
+		case PUGL_TEXT:
+			return static_cast<PuglStatus>(
+			    onText(typedEventRef<TextEvent>(event->text)));
+		case PUGL_POINTER_IN:
+			return static_cast<PuglStatus>(onPointerIn(
+			    typedEventRef<PointerInEvent>(event->crossing)));
+		case PUGL_POINTER_OUT:
+			return static_cast<PuglStatus>(onPointerOut(
+			    typedEventRef<PointerOutEvent>(event->crossing)));
+		case PUGL_BUTTON_PRESS:
+			return static_cast<PuglStatus>(onButtonPress(
+			    typedEventRef<ButtonPressEvent>(event->button)));
+		case PUGL_BUTTON_RELEASE:
+			return static_cast<PuglStatus>(onButtonRelease(
+			    typedEventRef<ButtonReleaseEvent>(event->button)));
+		case PUGL_MOTION:
+			return static_cast<PuglStatus>(
+			    onMotion(typedEventRef<MotionEvent>(event->motion)));
+		case PUGL_SCROLL:
+			return static_cast<PuglStatus>(
+			    onScroll(typedEventRef<ScrollEvent>(event->scroll)));
+		case PUGL_CLIENT:
+			return static_cast<PuglStatus>(
+			    onClient(typedEventRef<ClientEvent>(event->client)));
+		case PUGL_TIMER:
+			return static_cast<PuglStatus>(
+			    onTimer(typedEventRef<TimerEvent>(event->timer)));
 		}
 
-		return Status::failure;
+		return PUGL_FAILURE;
 	}
 
-	template <class E>
-	Status dispatchTypedEvent(const E& event)
-	{
-		auto& handler = std::get<E::type>(_eventFuncs);
-		if (handler) {
-			return handler(*this, event);
-		}
-
-		return Status::success;
-	}
-
-	Data       _data;
-	EventFuncs _eventFuncs;
+	World& _world;
 };
+
+/**
+   @}
+*/
 
 } // namespace pugl
 

@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,17 +15,22 @@
 */
 
 /**
-   @file x11.h Shared definitions for X11 implementation.
+   @file x11.h
+   @brief Shared definitions for X11 implementation.
 */
 #ifndef PUGL_DETAIL_IMPLEMENTATION_X11_H
 #define PUGL_DETAIL_IMPLEMENTATION_X11_H
 
-#include "pugl/detail/implementation.h"
+#include "pugl/detail/types.h"
+#include "pugl/pugl.h"
 
+#include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct {
 	Atom CLIPBOARD;
@@ -34,6 +39,7 @@ typedef struct {
 	Atom UTF8_STRING;
 	Atom WM_PROTOCOLS;
 	Atom WM_DELETE_WINDOW;
+	Atom PUGL_CLIENT_MSG;
 	Atom NET_WM_NAME;
 	Atom NET_WM_STATE;
 	Atom NET_WM_STATE_DEMANDS_ATTENTION;
@@ -65,13 +71,14 @@ struct PuglWorldInternalsImpl {
 
 struct PuglInternalsImpl {
 	Display*     display;
-	int          screen;
 	XVisualInfo* vi;
 	Window       win;
 	XIC          xic;
 	PuglSurface* surface;
 	PuglEvent    pendingConfigure;
 	PuglEvent    pendingExpose;
+	int          screen;
+	unsigned     cursorShape;
 	int          clipboardRequested;
 	bool         incrClipboardRequest;
 	bool         displayed;

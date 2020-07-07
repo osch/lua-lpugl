@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,8 @@
 */
 
 /**
-   @file pugl_gl.h OpenGL-specific API.
+   @file pugl_gl.h
+   @brief OpenGL-specific API.
 */
 
 #ifndef PUGL_PUGL_GL_H
@@ -23,9 +24,14 @@
 
 #include "pugl/pugl.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+PUGL_BEGIN_DECLS
+
+/**
+   @defgroup gl OpenGL
+   OpenGL graphics support.
+   @ingroup pugl_c
+   @{
+*/
 
 /**
    OpenGL extension function.
@@ -41,7 +47,7 @@ puglGetProcAddress(const char* name);
 /**
    OpenGL graphics backend.
 
-   Pass the return value to puglInitBackend() to draw to a view with OpenGL.
+   Pass the return value to puglSetBackend() to draw to a view with OpenGL.
 */
 PUGL_API const PuglBackend*
 puglGlBackend(void);
@@ -57,8 +63,10 @@ PUGL_API void*
 puglGlBackendGetNativeWorld(PuglWorld* world);
 
 
-#ifdef __cplusplus
-}  /* extern "C" */
-#endif
+PUGL_END_DECLS
+
+/**
+   @}
+*/
 
 #endif // PUGL_PUGL_GL_H

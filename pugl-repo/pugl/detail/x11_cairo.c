@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,8 @@
 */
 
 /**
-   @file x11_cairo.c Cairo graphics backend for X11.
+   @file x11_cairo.c
+   @brief Cairo graphics backend for X11.
 */
 
 #include "pugl/detail/types.h"
@@ -27,8 +28,6 @@
 #include <cairo-xlib.h>
 #include <cairo.h>
 
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 typedef struct  {
@@ -122,13 +121,6 @@ puglX11CairoLeave(PuglView* view, const PuglEventExpose* expose)
 	return PUGL_SUCCESS;
 }
 
-static PuglStatus
-puglX11CairoResize(PuglView* view, int width, int height)
-{
-	puglX11CairoClose(view);
-	return PUGL_SUCCESS;
-}
-
 static void*
 puglX11CairoGetContext(PuglView* view)
 {
@@ -153,15 +145,12 @@ puglCairoBackendGetNativeWorld(PuglWorld* world)
 const PuglBackend*
 puglCairoBackend(void)
 {
-	static const PuglBackend backend = {
-		puglX11StubConfigure,
-		puglX11CairoCreate,
-		puglX11CairoDestroy,
-		puglX11CairoEnter,
-		puglX11CairoLeave,
-		puglX11CairoResize,
-		puglX11CairoGetContext
-	};
+	static const PuglBackend backend = {puglX11StubConfigure,
+	                                    puglX11CairoCreate,
+	                                    puglX11CairoDestroy,
+	                                    puglX11CairoEnter,
+	                                    puglX11CairoLeave,
+	                                    puglX11CairoGetContext};
 
 	return &backend;
 }

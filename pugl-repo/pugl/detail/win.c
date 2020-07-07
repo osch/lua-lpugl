@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,11 +15,14 @@
 */
 
 /**
-   @file win.c Windows implementation.
+   @file win.c
+   @brief Windows implementation.
 */
 
-#include "pugl/detail/implementation.h"
 #include "pugl/detail/win.h"
+
+#include "pugl/detail/implementation.h"
+#include "pugl/detail/stub.h"
 #include "pugl/pugl.h"
 #include "pugl/pugl_stub.h"
 
@@ -28,7 +31,6 @@
 
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wctype.h>
@@ -51,9 +53,7 @@
 #define PUGL_LOCAL_AWAKE_MSG  (WM_USER + 52)
 #define PUGL_LOCAL_TIMER_MSG  (WM_USER + 53)
 #define PUGL_LOCAL_CLIPBD_MSG (WM_USER + 54)
-
-#define PUGL_RESIZE_TIMER_ID  9461
-#define PUGL_URGENT_TIMER_ID  9462
+#define PUGL_LOCAL_CLIENT_MSG (WM_USER + 52)
 
 typedef BOOL (WINAPI *PFN_SetProcessDPIAware)(void);
 
@@ -86,7 +86,8 @@ puglInitApplication(PuglApplicationFlags PUGL_UNUSED(flags))
 }
 
 PuglWorldInternals*
-puglInitWorldInternals(void)
+puglInitWorldInternals(PuglWorldType PUGL_UNUSED(type),
+                       PuglWorldFlags PUGL_UNUSED(flags))
 {
 	PuglWorldInternals* impl = (PuglWorldInternals*)calloc(
 		1, sizeof(PuglWorldInternals));
@@ -270,8 +271,8 @@ puglInitViewInternals(void)
 	return (PuglInternals*)calloc(1, sizeof(PuglInternals));
 }
 
-PuglStatus
-puglPollEvents(PuglWorld* world, const double timeout)
+static PuglStatus
+puglPollWinEvents(PuglWorld* world, const double timeout)
 {
 	if (!world->impl->initialized && !puglInitWorldInternals2(world)) {
 		return PUGL_FAILURE;
@@ -302,11 +303,9 @@ puglAwake(PuglWorld* world)
 }
 
 PuglStatus
-puglCreateWindow(PuglView* view, const char* title)
+puglRealize(PuglView* view)
 {
 	PuglInternals* impl = view->impl;
-
-	title = title ? title : view->world->className;
 
 	// Get refresh rate for resize draw timer
 	DEVMODEA devMode = {0};
@@ -329,11 +328,15 @@ puglCreateWindow(PuglView* view, const char* title)
 		return PUGL_CREATE_CONTEXT_FAILED;
 	}
 
-	if (title) {
-		puglSetWindowTitle(view, title);
+	if (view->title) {
+		puglSetWindowTitle(view, view->title);
 	}
 
+	view->impl->cursor = LoadCursor(NULL, IDC_ARROW);
+
 	SetWindowLongPtr(impl->hwnd, GWLP_USERDATA, (LONG_PTR)view);
+
+	puglDispatchSimpleEvent(view, PUGL_CREATE);
 
 	return PUGL_SUCCESS;
 }
@@ -349,7 +352,6 @@ puglShowWindow(PuglView* view)
 	    ShowWindow(impl->hwnd, SW_SHOWNORMAL);
 	    SetFocus(impl->hwnd);
 	}
-	view->visible = true;
 	return PUGL_SUCCESS;
 }
 
@@ -359,7 +361,6 @@ puglHideWindow(PuglView* view)
 	PuglInternals* impl = view->impl;
 
 	ShowWindow(impl->hwnd, SW_HIDE);
-	view->visible = false;
 	return PUGL_SUCCESS;
 }
 
@@ -416,6 +417,7 @@ puglFreeWorldInternals(PuglWorld* world)
 static PuglKey
 keySymToSpecial(WPARAM sym)
 {
+	// clang-format off
 	switch (sym) {
 	case VK_F1:       return PUGL_KEY_F1;
 	case VK_F2:       return PUGL_KEY_F2;
@@ -457,17 +459,21 @@ keySymToSpecial(WPARAM sym)
 	case VK_SNAPSHOT: return PUGL_KEY_PRINT_SCREEN;
 	case VK_PAUSE:    return PUGL_KEY_PAUSE;
 	}
+	// clang-format on
+
 	return (PuglKey)0;
 }
 
 static uint32_t
 getModifiers(void)
 {
+	// clang-format off
 	return (((GetKeyState(VK_SHIFT)   < 0) ? PUGL_MOD_SHIFT  : 0u) |
 	        ((GetKeyState(VK_CONTROL) < 0) ? PUGL_MOD_CTRL   : 0u) |
 	        ((GetKeyState(VK_MENU)    < 0) ? PUGL_MOD_ALT    : 0u) |
 	        ((GetKeyState(VK_LWIN)    < 0) ? PUGL_MOD_SUPER  : 0u) |
 	        ((GetKeyState(VK_RWIN)    < 0) ? PUGL_MOD_SUPER  : 0u));
+	// clang-format on
 }
 
 static void
@@ -513,7 +519,7 @@ initScrollEvent(PuglEvent* event, PuglView* view, LPARAM lParam)
 	event->scroll.dy     = 0;
 }
 
-/** Return the code point for buf, or the replacement character on error. */
+/// Return the code point for buf, or the replacement character on error
 static uint32_t
 puglDecodeUTF16(const wchar_t* buf, const int len)
 {
@@ -577,8 +583,9 @@ initKeyEvent(PuglEventKey* event,
 		// Translate unshifted key
 		BYTE    keyboardState[256] = {0};
 		wchar_t buf[5]             = {0};
-		const int ulen = ToUnicode(vkey, vcode, keyboardState, buf, 4, 1<<2);
-		event->key = puglDecodeUTF16(buf, ulen);
+
+		event->key = puglDecodeUTF16(
+		    buf, ToUnicode(vkey, vcode, keyboardState, buf, 4, 1 << 2));
 	}
 	MSG msg;
 	while (PeekMessageW(&msg, view->impl->hwnd, wmCharMsgType, wmCharMsgType, PM_REMOVE)) {
@@ -683,8 +690,6 @@ handleConfigure(PuglView* view, PuglEvent* event)
 	if (view->frame.width != width || view->frame.height != height) {
 		view->frame.width  = width;
 		view->frame.height = height;
-
-		view->backend->resize(view, width, height);
 	}
 
 	return rect;
@@ -705,18 +710,10 @@ handleCrossing(PuglView* view, const PuglEventType type, POINT pos)
 		(double)root_pos.x,
 		(double)root_pos.y,
 		getModifiers(),
-		PUGL_CROSSING_NORMAL
+		PUGL_CROSSING_NORMAL,
 	};
-	puglDispatchEvent(view, (PuglEvent*)&ev);
-}
 
-static void
-stopFlashing(PuglView* view)
-{
-	if (view->impl->flashing) {
-		KillTimer(view->impl->hwnd, PUGL_URGENT_TIMER_ID);
-		FlashWindow(view->impl->hwnd, FALSE);
-	}
+	puglDispatchEvent(view, (PuglEvent*)&ev);
 }
 
 static void
@@ -774,16 +771,30 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		event.any.flags |= PUGL_IS_SEND_EVENT;
 	}
 	switch (message) {
+	case WM_SETCURSOR:
+		if (LOWORD(lParam) == HTCLIENT) {
+			SetCursor(view->impl->cursor);
+		}
 	case WM_MOVE:
 		handleConfigure(view, &event);
 		break;
 	case WM_SHOWWINDOW:
-		rect = handleConfigure(view, &event);
-		RedrawWindow(view->impl->hwnd, NULL, NULL,
-		             RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_INTERNALPAINT);
+		if (wParam) {
+			handleConfigure(view, &event);
+			puglDispatchEvent(view, &event);
+			event.type = PUGL_NOTHING;
+
+			RedrawWindow(view->impl->hwnd, NULL, NULL,
+			             RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_INTERNALPAINT);
+		}
+
+		if ((bool)wParam != view->visible) {
+			view->visible = wParam;
+			event.any.type = wParam ? PUGL_MAP : PUGL_UNMAP;
+		}
 		break;
 	case WM_SIZE:
-		rect = handleConfigure(view, &event);
+		handleConfigure(view, &event);
 		InvalidateRect(view->impl->hwnd, NULL, false);
 		break;
 	case WM_SIZING:
@@ -795,22 +806,11 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ENTERSIZEMOVE:
 	case WM_ENTERMENULOOP:
 		view->impl->resizing = true;
-/*		SetTimer(view->impl->hwnd,
-		         PUGL_RESIZE_TIMER_ID,
-		         1000 / view->impl->refreshRate,
-		         NULL);*/
 		break;
 	case WM_TIMER:
-		if (wParam == PUGL_RESIZE_TIMER_ID) {
-			RedrawWindow(view->impl->hwnd, NULL, NULL,
-			             RDW_INVALIDATE|RDW_ALLCHILDREN|RDW_INTERNALPAINT);
-		} else if (wParam == PUGL_URGENT_TIMER_ID) {
-			FlashWindow(view->impl->hwnd, TRUE);
-		}
 		break;
 	case WM_EXITSIZEMOVE:
 	case WM_EXITMENULOOP:
-//		KillTimer(view->impl->hwnd, PUGL_RESIZE_TIMER_ID);
 		view->impl->resizing = false;
 //		puglPostRedisplay(view);
 		break;
@@ -894,30 +894,29 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 
 		if (!view->impl->mouseTracked) {
 			TRACKMOUSEEVENT tme = {0};
+
 			tme.cbSize    = sizeof(tme);
 			tme.dwFlags   = TME_LEAVE;
 			tme.hwndTrack = view->impl->hwnd;
 			TrackMouseEvent(&tme);
 
-			stopFlashing(view);
-			handleCrossing(view, PUGL_ENTER_NOTIFY, pt);
+			handleCrossing(view, PUGL_POINTER_IN, pt);
 			view->impl->mouseTracked = true;
 		}
 
 		ClientToScreen(view->impl->hwnd, &pt);
-		event.motion.type    = PUGL_MOTION_NOTIFY;
+		event.motion.type    = PUGL_MOTION;
 		event.motion.time    = GetMessageTime() / 1e3;
 		event.motion.x       = GET_X_LPARAM(lParam);
 		event.motion.y       = GET_Y_LPARAM(lParam);
 		event.motion.xRoot   = pt.x;
 		event.motion.yRoot   = pt.y;
 		event.motion.state   = getModifiers();
-		event.motion.isHint  = false;
 		break;
 	case WM_MOUSELEAVE:
 		GetCursorPos(&pt);
 		ScreenToClient(view->impl->hwnd, &pt);
-		handleCrossing(view, PUGL_LEAVE_NOTIFY, pt);
+		handleCrossing(view, PUGL_POINTER_OUT, pt);
 		view->impl->mouseTracked = false;
 		break;
 	case WM_LBUTTONDOWN:
@@ -941,10 +940,16 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEWHEEL:
 		initScrollEvent(&event, view, lParam);
 		event.scroll.dy = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		event.scroll.direction = (event.scroll.dy > 0
+		                          ? PUGL_SCROLL_UP
+		                          : PUGL_SCROLL_DOWN);
 		break;
 	case WM_MOUSEHWHEEL:
 		initScrollEvent(&event, view, lParam);
 		event.scroll.dx = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		event.scroll.direction = (event.scroll.dx > 0
+		                          ? PUGL_SCROLL_RIGHT
+		                          : PUGL_SCROLL_LEFT);
 		break;
 	case WM_KEYDOWN:
 		if (!ignoreKeyEvent(view, lParam)) {
@@ -959,7 +964,6 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		initCharEvent(&event.key, view, wParam, lParam);
 		break;
 	case WM_SETFOCUS:
-		stopFlashing(view);
 		event.type = PUGL_FOCUS_IN;
 		break;
 	case WM_KILLFOCUS:
@@ -979,13 +983,18 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_SYSCHAR:
-		return TRUE;//*/
+		return TRUE;
+	case PUGL_LOCAL_CLIENT_MSG:
+		event.client.type  = PUGL_CLIENT;
+		event.client.data1 = (uintptr_t)wParam;
+		event.client.data2 = (uintptr_t)lParam;
+		break;
 	case WM_QUIT:
 	case PUGL_LOCAL_CLOSE_MSG:
-		event.close.type = PUGL_CLOSE;
+		event.type = PUGL_CLOSE;
 		break;
 	case WM_DESTROY:
-	        event.destroy.type = PUGL_DESTROY;
+	        event.type = PUGL_MUST_FREE;
 		break;
 	case PUGL_LOCAL_CLIPBD_MSG:
 	        if (view->clipboard.data) {
@@ -1002,10 +1011,10 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 
 	puglDispatchEvent(view, &event);
 
-	if (event.type == PUGL_DESTROY 
+	if (event.type == PUGL_MUST_FREE 
 	    && view == (PuglView*)GetWindowLongPtr(view->impl->hwnd, GWLP_USERDATA))
 	{
-	    fprintf(stderr, "error: puglFreeView() should have been called in response to PUGL_DESTROY event.\n");
+	    fprintf(stderr, "error: puglFreeView() should have been called in response to PUGL_MUST_FREE event.\n");
 	    abort();
 	}
 
@@ -1028,11 +1037,13 @@ puglHasFocus(const PuglView* view)
 PuglStatus
 puglRequestAttention(PuglView* view)
 {
-	if (!view->impl->mouseTracked || !puglHasFocus(view)) {
-		FlashWindow(view->impl->hwnd, TRUE);
-		SetTimer(view->impl->hwnd, PUGL_URGENT_TIMER_ID, 500, NULL);
-		view->impl->flashing = true;
-	}
+	FLASHWINFO info = {sizeof(FLASHWINFO),
+	                   view->impl->hwnd,
+	                   FLASHW_ALL|FLASHW_TIMERNOFG,
+	                   1,
+	                   0};
+
+	FlashWindowEx(&info);
 
 	return PUGL_SUCCESS;
 }
@@ -1088,14 +1099,31 @@ puglSetNextProcessTime(PuglWorld* world, double seconds)
 }
 
 PuglStatus
+puglSendEvent(PuglView* view, const PuglEvent* event)
+{
+	if (event->type == PUGL_CLIENT) {
+		PostMessage(view->impl->hwnd,
+		            PUGL_LOCAL_CLIENT_MSG,
+		            (WPARAM)event->client.data1,
+		            (LPARAM)event->client.data2);
+
+		return PUGL_SUCCESS;
+	}
+
+	return PUGL_UNSUPPORTED_TYPE;
+}
+
+#ifndef PUGL_DISABLE_DEPRECATED
+PuglStatus
 puglWaitForEvent(PuglView* PUGL_UNUSED(view))
 {
 	WaitMessage();
 	return PUGL_SUCCESS;
 }
+#endif
 
-PUGL_API PuglStatus
-puglDispatchEvents(PuglWorld* PUGL_UNUSED(world))
+static PuglStatus
+puglDispatchViewEvents(HWND hwnd)
 {
 	/* Windows has no facility to process only currently queued messages, which
 	   causes the event loop to run forever in cases like mouse movement where
@@ -1103,11 +1131,10 @@ puglDispatchEvents(PuglWorld* PUGL_UNUSED(world))
 	   this, we post a message to ourselves before starting, record its time
 	   when it is received, then break the loop on the first message that was
 	   created afterwards. */
-	PostMessage(NULL, PUGL_LOCAL_MARK_MSG, 0, 0);
 
 	long markTime = 0;
 	MSG  msg;
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+	while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
 		if (msg.message == PUGL_LOCAL_MARK_MSG) {
 			markTime = GetMessageTime();
 		} else {
@@ -1122,11 +1149,61 @@ puglDispatchEvents(PuglWorld* PUGL_UNUSED(world))
 	return PUGL_SUCCESS;
 }
 
+static PuglStatus
+puglDispatchWinEvents(PuglWorld* world)
+{
+	PostMessage(world->impl->pseudoWin, PUGL_LOCAL_MARK_MSG, 0, 0);
+	for (size_t i = 0; i < world->numViews; ++i) {
+		PostMessage(world->views[i]->impl->hwnd, PUGL_LOCAL_MARK_MSG, 0, 0);
+	}
+
+	puglDispatchViewEvents(world->impl->pseudoWin);
+	for (size_t i = 0; i < world->numViews; ++i) {
+		puglDispatchViewEvents(world->views[i]->impl->hwnd);
+	}
+
+	return PUGL_SUCCESS;
+}
+
+PuglStatus
+puglUpdate(PuglWorld* world, double timeout)
+{
+	const double startTime = puglGetTime(world);
+	PuglStatus   st        = PUGL_SUCCESS;
+
+	if (timeout < 0.0) {
+		st = puglPollWinEvents(world, timeout);
+		st = st ? st : puglDispatchWinEvents(world);
+	} else if (timeout == 0.0) {
+		st = puglDispatchWinEvents(world);
+	} else {
+		const double endTime = startTime + timeout - 0.001;
+		for (double t = startTime; t < endTime; t = puglGetTime(world)) {
+			if ((st = puglPollWinEvents(world, endTime - t)) ||
+			    (st = puglDispatchWinEvents(world))) {
+				break;
+			}
+		}
+	}
+
+	for (size_t i = 0; i < world->numViews; ++i) {
+		if (world->views[i]->visible) {
+			puglDispatchSimpleEvent(world->views[i], PUGL_UPDATE);
+		}
+
+		UpdateWindow(world->views[i]->impl->hwnd);
+	}
+
+	return st;
+}
+
+#ifndef PUGL_DISABLE_DEPRECATED
 PuglStatus
 puglProcessEvents(PuglView* view)
 {
-	return puglDispatchEvents(view->world);
+	return puglUpdate(view->world, 0.0);
 }
+#endif
 
 LRESULT CALLBACK
 worldWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1176,7 +1253,6 @@ wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message) {
 	case WM_CREATE:
-		PostMessage(hwnd, WM_SHOWWINDOW, TRUE, 0);
 		return 0;
 	case WM_CLOSE:
 		PostMessage(hwnd, PUGL_LOCAL_CLOSE_MSG, wParam, lParam);
@@ -1219,10 +1295,10 @@ puglPostRedisplayRect(PuglView* view, const PuglRect rect)
 	return PUGL_SUCCESS;
 }
 
-PuglNativeWindow
+PuglNativeView
 puglGetNativeWindow(PuglView* view)
 {
-	return (PuglNativeWindow)view->impl->hwnd;
+	return (PuglNativeView)view->impl->hwnd;
 }
 
 PuglStatus
@@ -1230,10 +1306,12 @@ puglSetWindowTitle(PuglView* view, const char* title)
 {
 	puglSetString(&view->title, title);
 
-	wchar_t* wtitle = puglUtf8ToWideChar(title);
-	if (wtitle) {
-		SetWindowTextW(view->impl->hwnd, wtitle);
-		free(wtitle);
+	if (view->impl->hwnd) {
+		wchar_t* wtitle = puglUtf8ToWideChar(title);
+		if (wtitle) {
+			SetWindowTextW(view->impl->hwnd, wtitle);
+			free(wtitle);
+		}
 	}
 
 	return PUGL_SUCCESS;
@@ -1242,6 +1320,8 @@ puglSetWindowTitle(PuglView* view, const char* title)
 PuglStatus
 puglSetFrame(PuglView* view, const PuglRect frame)
 {
+        view->reqX      = (int)frame.x;
+        view->reqY      = (int)frame.y;
 	view->reqWidth  = (int)frame.width;
 	view->reqHeight = (int)frame.height;
 
@@ -1255,10 +1335,13 @@ puglSetFrame(PuglView* view, const PuglRect frame)
 		                   FALSE,
 		                   puglWinGetWindowExFlags(view));
 
-		if (!SetWindowPos(view->impl->hwnd, HWND_TOP,
-		                  rect.left, rect.top,
-		                  rect.right - rect.left, rect.bottom - rect.top,
-		                  (SWP_NOACTIVATE|SWP_NOOWNERZORDER|SWP_NOZORDER))) {
+		if (!SetWindowPos(view->impl->hwnd,
+		                  HWND_TOP,
+		                  rect.left,
+		                  rect.top,
+		                  rect.right - rect.left,
+		                  rect.bottom - rect.top,
+		                  SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER)) {
 			return PUGL_UNKNOWN_ERROR;
 		}
 	}
@@ -1324,7 +1407,7 @@ puglSetAspectRatio(PuglView* const view,
 }
 
 PuglStatus
-puglSetTransientFor(PuglView* view, PuglNativeWindow parent)
+puglSetTransientFor(PuglView* view, PuglNativeView parent)
 {
 	if (!view->impl->hwnd) {
 		view->transientParent = parent;
@@ -1435,7 +1518,40 @@ puglWinStubLeave(PuglView* view, const PuglEventExpose* expose)
 		PAINTSTRUCT ps;
 		EndPaint(view->impl->hwnd, &ps);
 		view->impl->hasBeginPaint = false;
-		SwapBuffers(view->impl->hdc);
+	}
+
+	return PUGL_SUCCESS;
+}
+
+static const char* const cursor_ids[] = {
+    IDC_ARROW,  // ARROW
+    IDC_IBEAM,  // CARET
+    IDC_CROSS,  // CROSSHAIR
+    IDC_HAND,   // HAND
+    IDC_NO,     // NO
+    IDC_SIZEWE, // LEFT_RIGHT
+    IDC_SIZENS, // UP_DOWN
+};
+
+PuglStatus
+puglSetCursor(PuglView* view, PuglCursor cursor)
+{
+	PuglInternals* const impl  = view->impl;
+	const unsigned       index = (unsigned)cursor;
+	const unsigned       count = sizeof(cursor_ids) / sizeof(cursor_ids[0]);
+
+	if (index >= count) {
+		return PUGL_BAD_PARAMETER;
+	}
+
+	const HCURSOR cur = LoadCursor(NULL, cursor_ids[index]);
+	if (!cur) {
+		return PUGL_FAILURE;
+	}
+
+	impl->cursor = cur;
+	if (impl->mouseTracked) {
+		SetCursor(cur);
 	}
 
 	return PUGL_SUCCESS;
@@ -1449,7 +1565,6 @@ puglStubBackend(void)
 	                                    puglStubDestroy,
 	                                    puglWinStubEnter,
 	                                    puglWinStubLeave,
-	                                    puglStubResize,
 	                                    puglStubGetContext};
 
 	return &backend;

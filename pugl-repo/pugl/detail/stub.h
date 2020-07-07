@@ -15,47 +15,61 @@
 */
 
 /**
-   @file pugl_cairo.h
-   @brief Declaration of Cairo backend accessor.
+   @file stub.h
+   @brief Definition of generic stub backend functions.
 */
 
-#ifndef PUGL_PUGL_CAIRO_H
-#define PUGL_PUGL_CAIRO_H
+#ifndef PUGL_DETAIL_STUB_H
+#define PUGL_DETAIL_STUB_H
 
 #include "pugl/pugl.h"
 
 PUGL_BEGIN_DECLS
 
-/**
-   @defgroup cairo Cairo
-   Cairo graphics support.
-   @ingroup pugl_c
-   @{
-*/
+static inline PuglStatus
+puglStubConfigure(PuglView* view)
+{
+	(void)view;
+	return PUGL_SUCCESS;
+}
 
-/**
-   Cairo graphics backend accessor.
+static inline PuglStatus
+puglStubCreate(PuglView* view)
+{
+	(void)view;
+	return PUGL_SUCCESS;
+}
 
-   Pass the return value to puglInitBackend() to draw to a view with Cairo.
-*/
-PUGL_API const PuglBackend*
-puglCairoBackend(void);
+static inline PuglStatus
+puglStubDestroy(PuglView* view)
+{
+	(void)view;
+	return PUGL_SUCCESS;
+}
 
-/**
-   Return a pointer to the native handle of the world.
+static inline PuglStatus
+puglStubEnter(PuglView* view, const PuglEventExpose* expose)
+{
+	(void)view;
+	(void)expose;
+	return PUGL_SUCCESS;
+}
 
-   On X11, this returns a pointer to the Display.
-   On OSX, this returns CGContextRef for current GraphicsPort.
-   On Windows, this returns a handle to the calling process module.
-*/
-PUGL_API void*
-puglCairoBackendGetNativeWorld(PuglWorld* world);
+static inline PuglStatus
+puglStubLeave(PuglView* view, const PuglEventExpose* expose)
+{
+	(void)view;
+	(void)expose;
+	return PUGL_SUCCESS;
+}
 
+static inline void*
+puglStubGetContext(PuglView* view)
+{
+	(void)view;
+	return NULL;
+}
 
 PUGL_END_DECLS
 
-/**
-   @}
-*/
-
-#endif // PUGL_PUGL_CAIRO_H
+#endif // PUGL_DETAIL_STUB_H

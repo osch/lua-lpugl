@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2019 David Robillard <http://drobilla.net>
+  Copyright 2012-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -15,9 +15,11 @@
 */
 
 /**
-   @file win_cairo.c Cairo graphics backend for Windows.
+   @file win_cairo.c
+   @brief Cairo graphics backend for Windows.
 */
 
+#include "pugl/detail/stub.h"
 #include "pugl/detail/types.h"
 #include "pugl/detail/win.h"
 #include "pugl/pugl_cairo.h"
@@ -134,15 +136,6 @@ puglWinCairoLeave(PuglView* view, const PuglEventExpose* expose)
 	return PUGL_SUCCESS;
 }
 
-static PuglStatus
-puglWinCairoResize(PuglView* view,
-                   int       PUGL_UNUSED(width),
-                   int       PUGL_UNUSED(height))
-{
-	puglWinCairoClose(view);
-	return PUGL_SUCCESS;
-}
-
 static void*
 puglWinCairoGetContext(PuglView* view)
 {
@@ -161,15 +154,12 @@ puglWinCairoGetContext(PuglView* view)
 const PuglBackend*
 puglCairoBackend()
 {
-	static const PuglBackend backend = {
-		puglWinStubConfigure,
-		puglWinCairoCreate,
-		puglWinCairoDestroy,
-		puglWinCairoEnter,
-		puglWinCairoLeave,
-		puglWinCairoResize,
-		puglWinCairoGetContext
-	};
+	static const PuglBackend backend = {puglWinStubConfigure,
+	                                    puglWinCairoCreate,
+	                                    puglWinCairoDestroy,
+	                                    puglWinCairoEnter,
+	                                    puglWinCairoLeave,
+	                                    puglWinCairoGetContext};
 
 	return &backend;
 }

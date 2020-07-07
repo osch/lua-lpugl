@@ -53,32 +53,38 @@ LOPTS_CAIRO   := $(or $(LOPTS_CAIRO),   $($(PLATFORM)_LOPTS_CAIRO))
 LOPTS_OPENGL  := $(or $(LOPTS_OPENGL),  $($(PLATFORM)_LOPTS_OPENGL))
 
 lpugl:
+	@mkdir -p build
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I../pugl-repo/ \
-	    -o lpugl.$(SO_EXT) lpugl.c -D LPUGL_VERSION=Makefile-1 \
+	    -o build/lpugl.$(SO_EXT) lpugl.c -D LPUGL_VERSION=Makefile-1 \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
+	    -DPUGL_DISABLE_DEPRECATED \
 	    async_util.c   util.c world.c view.c error.c pugl.$(PUGLC_EXT) \
 	    lpugl_compat.c \
 	    $(LOPTS)
 
 lpugl_cairo:
+	@mkdir -p build
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I /usr/include/cairo \
 	    -I../pugl-repo/ \
-	    -o lpugl_cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
+	    -o build/lpugl_cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
+	    -DPUGL_DISABLE_DEPRECATED \
 	    async_util.c   util.c pugl_cairo.$(PUGLC_EXT) \
 	    lpugl_compat.c \
 	    $(LOPTS) $(LOPTS_CAIRO) 
 	    
 lpugl_opengl:
+	@mkdir -p build
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I../pugl-repo/ \
-	    -o lpugl_opengl.$(SO_EXT) lpugl_opengl.c -D LPUGL_VERSION=Makefile-1  \
+	    -o build/lpugl_opengl.$(SO_EXT) lpugl_opengl.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
+	    -DPUGL_DISABLE_DEPRECATED \
 	    async_util.c   util.c pugl_opengl.$(PUGLC_EXT) \
 	    lpugl_compat.c \
 	    $(LOPTS) $(LOPTS_OPENGL)

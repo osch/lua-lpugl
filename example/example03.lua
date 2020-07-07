@@ -8,9 +8,9 @@ local sqrt  = math.sqrt
 
 local unpack = table.unpack or unpack -- for Lua 5.1
 
-local world = lpugl.newWorld("example03.lua")
-
 math.randomseed(os.time())
+
+local world = lpugl.newWorld("example03.lua")
 
 local fillCache
 local drawBall
@@ -100,17 +100,11 @@ do
     end
 
 
-    local renderTime  = 0
-    local renderCount = 0
-    
     objects_draw = function(cairo, w, h)
-        local startTime = world:getTime()
         for i = 1, #objects do
             local obj = objects[i]
             drawBall(cairo, obj.x, obj.y, obj.r, obj.g)
         end
-        renderTime  = renderTime + (world:getTime() - startTime)
-        renderCount = renderCount + 1
     end
     
     objects_push = function(bx, by)
@@ -126,11 +120,7 @@ do
     end
 
     local lastT = world:getTime()
-    local lastP = world:getTime()
 
-    local processTime = 0
-    local processCount = 0
-    
     objects_process = function(w, h)
         local currT = world:getTime()
         local dt = (currT - lastT) * 1000
@@ -159,18 +149,6 @@ do
             obj.dx = obj.dx * (1 - dt * 0.0001)
             obj.dy = obj.dy * (1 - dt * 0.0001)
         end
-        processTime  = processTime + world:getTime() - currT
-        processCount = processCount + 1
-        if currT > lastP + 2 and renderCount > 0 and processCount > 0 then
-            print(string.format("render: %5.1fms, process: %5.1fms", 
-                                renderTime/renderCount * 1000,
-                                processTime/processCount * 1000))
-            renderTime  = 0
-            renderCount = 0
-            processTime  = 0
-            processCount = 0
-            lastP = currT
-        end
         lastT = currT
     end
 end
@@ -181,8 +159,28 @@ local view = world:newView {
 }
 view:setSize(initialWidth, initialHeight)
 
+local lastDisplayTime = 0
+
+local renderStartTime = nil
+local renderTime  = 0
+local renderCount = 0
+
+local lastRender  = 0
+local frameTime   = 0
+local frameCount  = 0
+
+local processTime = 0
+local processCount = 0
+    
+
+
 view:setEventFunc(function(event, ...)
     if event == "EXPOSE" then
+        local startTime = world:getTime()
+        frameTime = frameTime + startTime - lastRender
+        frameCount = frameCount + 1
+        lastRender = startTime
+
         local cairo = view:getDrawContext()
         local w, h  = view:getSize()
         
@@ -192,6 +190,9 @@ view:setEventFunc(function(event, ...)
         
         objects_draw(cairo, w, h)
         
+        renderStartTime = startTime
+        world:setNextProcessTime(0)
+
     elseif event == "BUTTON_PRESS" then
         local bx, by, bn = ...
         if bn == 1 then
@@ -203,16 +204,51 @@ view:setEventFunc(function(event, ...)
 end)
 view:show()
 
+local lastP = world:getTime()
+
+local REFRESH_PERIOD = 0.015
+
 world:setProcessFunc(function()
     if not view:isClosed() then
-        objects_process(view:getSize())
-        view:postRedisplay()
+        local startTime = world:getTime()
+
+        if renderStartTime then
+            renderTime  = renderTime + (startTime - renderStartTime)
+            renderCount = renderCount + 1
+            lastDisplayTime = renderStartTime
+            renderStartTime = nil
+        end
+
+        local now = world:getTime()
+        if now >= lastDisplayTime + REFRESH_PERIOD then
+            objects_process(view:getSize())
+            processTime  = processTime + world:getTime() - startTime
+            processCount = processCount + 1
+            
+            view:postRedisplay()
+            world:setNextProcessTime(REFRESH_PERIOD)
+        else
+            world:setNextProcessTime(lastDisplayTime + REFRESH_PERIOD - now)
+        end
+
+        if startTime > lastP + 2 and renderCount > 0 and processCount > 0 then
+            print(string.format("render: %5.1fms, process: %5.1fms, period: %5.1fms", 
+                                renderTime/renderCount * 1000,
+                                processTime/processCount * 1000,
+                                frameTime/frameCount * 1000))
+            renderTime  = 0
+            renderCount = 0
+            processTime  = 0
+            processCount = 0
+            frameTime    = 0
+            frameCount   = 0
+            lastP = startTime
+        end
     end
-    world:setNextProcessTime(0.020)
+    
 end)
 world:setNextProcessTime(0)
 
 while world:hasViews() do
-    world:pollEvents()
-    world:dispatchEvents()
+    world:update()
 end
