@@ -1559,6 +1559,50 @@ puglSetCursor(PuglView* view, PuglCursor cursor)
 	return PUGL_SUCCESS;
 }
 
+double
+puglGetScreenScale(PuglView* view)
+{
+    PuglWorldInternals* worldImpl = view->world->impl;
+    if (!worldImpl->triedDpiForMonitor) {
+        worldImpl->triedDpiForMonitor = true;
+        worldImpl->getDpiForMonitor = (GetDpi_F)GetProcAddress(LoadLibrary("Shcore.DLL"), "GetDpiForMonitor");
+    }
+    if (worldImpl->getDpiForMonitor) {
+        HMONITOR mon = MonitorFromWindow(view->impl->hwnd, MONITOR_DEFAULTTOPRIMARY);
+        UINT dpiX, dpiY;
+        if (worldImpl->getDpiForMonitor(mon, 0, &dpiX, &dpiY) == S_OK) {
+            double dpi = (dpiX + dpiY)/2;
+            double rslt = ((int)((dpi/96) * 100 + 0.5))/(double)100;
+            if (rslt > 0) {
+                return rslt;
+            }
+        }
+    }
+    return 1.0;
+}
+
+double
+puglGetDefaultScreenScale(PuglWorld* world)
+{
+    PuglWorldInternals* worldImpl = world->impl;
+    if (!worldImpl->triedDpiForMonitor) {
+        worldImpl->triedDpiForMonitor = true;
+        worldImpl->getDpiForMonitor = (GetDpi_F)GetProcAddress(LoadLibrary("Shcore.DLL"), "GetDpiForMonitor");
+    }
+    if (worldImpl->getDpiForMonitor) {
+        HMONITOR mon = MonitorFromWindow(worldImpl->pseudoWin, MONITOR_DEFAULTTOPRIMARY);
+        UINT dpiX, dpiY;
+        if (worldImpl->getDpiForMonitor(mon, 0, &dpiX, &dpiY) == S_OK) {
+            double dpi = (dpiX + dpiY)/2;
+            double rslt = ((int)((dpi/96) * 100 + 0.5))/(double)100;
+            if (rslt > 0) {
+                return rslt;
+            }
+        }
+    }
+    return 1.0;
+}
+
 const PuglBackend*
 puglStubBackend(void)
 {

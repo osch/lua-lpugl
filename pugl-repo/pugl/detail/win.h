@@ -27,11 +27,15 @@
 
 typedef PIXELFORMATDESCRIPTOR PuglWinPFD;
 
+typedef HRESULT(WINAPI *GetDpi_F)(HMONITOR, int, UINT*, UINT*);
+
 struct PuglWorldInternalsImpl {
 	bool      initialized;
 	wchar_t*  worldClassName;
 	wchar_t*  windowClassName;
 	wchar_t*  popupClassName;
+	GetDpi_F  getDpiForMonitor;
+	bool      triedDpiForMonitor;
 	HWND      pseudoWin;
 	double    timerFrequency;
 	double    nextProcessTime;

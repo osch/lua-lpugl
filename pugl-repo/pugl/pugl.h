@@ -1210,6 +1210,19 @@ PUGL_API PuglStatus
 puglPostRedisplayRect(PuglView* view, PuglRect rect);
 
 /**
+   Get the screen scaling factor for the view.
+*/
+PUGL_API double
+puglGetScreenScale(PuglView* view);
+
+/**
+   Get the screen scaling factor for the main display.
+*/
+PUGL_API double
+puglGetDefaultScreenScale(PuglWorld* world);
+
+
+/**
    @}
    @anchor interaction
    @name Interaction

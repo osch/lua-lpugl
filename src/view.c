@@ -1047,6 +1047,18 @@ static int View_toString(lua_State* L)
 
 /* ============================================================================================ */
 
+static int View_getScreenScale(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    lua_pushnumber(L, puglGetScreenScale(udata->puglView));
+    return 1;
+}
+
+/* ============================================================================================ */
+
 static const luaL_Reg ViewMethods[] = 
 {
     { "show",               View_show         },
@@ -1055,12 +1067,13 @@ static const luaL_Reg ViewMethods[] =
     { "close",              View_close        },
     { "isClosed",           View_isClosed     },
     { "isVisible",          View_isVisible    },
-    { "getDrawContext",     View_getDrawContext  },
-    { "getLayoutContext",   View_getLayoutContext  },
+    { "getDrawContext",     View_getDrawContext   },
+    { "getLayoutContext",   View_getLayoutContext },
     { "setFrame",           View_setFrame        },
     { "getFrame",           View_getFrame        },
     { "setSize",            View_setSize         },
     { "getSize",            View_getSize         },
+    { "getScreenScale",     View_getScreenScale  },
     { "setMinSize",         View_setMinSize      },
     { "setMaxSize",         View_setMaxSize      },
     { "setTitle",           View_setTitle        },

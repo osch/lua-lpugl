@@ -11,6 +11,7 @@ local unpack = table.unpack or unpack -- for Lua 5.1
 math.randomseed(os.time())
 
 local world = lpugl.newWorld("example03.lua")
+local scale = world:getScreenScale()
 
 local fillCache
 local drawBall
@@ -79,7 +80,7 @@ do
     end
 end
 
-local initialWidth, initialHeight = 640, 480
+local initialWidth, initialHeight = 640*scale, 480*scale
 
 local objects_draw
 local objects_push
@@ -90,12 +91,12 @@ do
     for i = 1, 500 do
         local obj = {}
         objects[i] = obj
-        obj.r  = math.random(10, 30)
+        obj.r  = math.random(10*scale, 30*scale)
         obj.x  = math.random(obj.r, initialWidth  - 2 * obj.r)
         obj.y  = math.random(obj.r, initialHeight - 2 * obj.r)
         obj.g  = math.random(1, 3)
-        obj.dx = 5 * math.random() / 20
-        obj.dy = 5 * math.random() / 20
+        obj.dx = 5 * math.random() / 20 * scale
+        obj.dy = 5 * math.random() / 20 * scale
         fillCache(obj.g, obj.r)
     end
 
@@ -112,7 +113,7 @@ do
             local obj = objects[i]
             local x, y = obj.x, obj.y
             local bdx, bdy = x - bx, y - by
-            local bd = sqrt(bdx^2 + bdy^2)
+            local bd = sqrt(bdx^2 + bdy^2)/scale
             local a = (bd + 0.01)^-1.5 
             obj.dx = obj.dx + a * bdx
             obj.dy = obj.dy + a * bdy

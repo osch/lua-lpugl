@@ -1700,3 +1700,15 @@ puglHasClipboard(PuglWorld*  world)
 {
 	return false;
 }
+
+double
+puglGetScreenScale(PuglView* view)
+{
+    return [viewScreen(view) backingScaleFactor];
+}
+
+double
+puglGetDefaultScreenScale(PuglWorld* world)
+{
+    return [[NSScreen mainScreen] backingScaleFactor];
+}

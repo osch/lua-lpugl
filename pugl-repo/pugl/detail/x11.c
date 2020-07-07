@@ -41,6 +41,7 @@
 #include <X11/XKBlib.h>
 
 #include <X11/cursorfont.h>
+#include <X11/Xresource.h>
 
 #include <sys/select.h>
 #include <sys/time.h>
@@ -1458,6 +1459,39 @@ puglSetCursor(PuglView* view, PuglCursor cursor)
 	impl->cursorShape = cursor_nums[index];
 
 	return puglDefineCursorShape(view, impl->cursorShape);
+}
+
+double
+puglGetScreenScale(PuglView* view)
+{
+    return puglGetDefaultScreenScale(view->world);
+}
+
+double
+puglGetDefaultScreenScale(PuglWorld* world)
+{
+    double rslt = 1.0;
+    
+    PuglWorldInternals* impl = world->impl;
+    char* resourceString = XResourceManagerString(impl->display);
+    if (resourceString) {
+        XrmInitialize();
+        XrmDatabase db = XrmGetStringDatabase(resourceString);
+        if (db) {
+            XrmValue value;
+            char* type = NULL;
+            if (XrmGetResource(db, "Xft.dpi", "String", &type, &value) == True) {
+                if (value.addr) {
+                    double dpi = atof(value.addr);
+                    if (dpi > 0) {
+                        rslt = ((int)((dpi/96) * 100 + 0.5))/(double)100;
+                    }
+                }
+            }
+            XrmDestroyDatabase(db);
+        }
+    }
+    return rslt;
 }
 
 const PuglBackend*

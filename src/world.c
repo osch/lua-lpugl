@@ -736,6 +736,21 @@ static int World_hasClipboard(lua_State* L)
 
 /* ============================================================================================ */
 
+static int World_getScreenScale(lua_State* L)
+{
+    WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
+    if (udata->restricted) {
+        return lpugl_ERROR_RESTRICTED_ACCESS(L);
+    }
+    if (!udata->world) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    lua_pushnumber(L, puglGetDefaultScreenScale(udata->world->puglWorld));
+    return 1;
+}
+
+/* ============================================================================================ */
+
 static const luaL_Reg WorldMethods[] = 
 {
     { "setDefaultBackend",  World_setDefaultBackend  },
@@ -754,6 +769,7 @@ static const luaL_Reg WorldMethods[] =
     { "getTime",            World_getTime            },
     { "setClipboard",       World_setClipboard       },
     { "hasClipboard",       World_hasClipboard       },
+    { "getScreenScale",     World_getScreenScale     },
     
     { NULL,         NULL } /* sentinel */
 };

@@ -27,6 +27,7 @@
         * [world:setErrorFunc()](#world_setErrorFunc)
         * [world:setClipboard()](#world_setClipboard)
         * [world:hasClipboard()](#world_hasClipboard)
+        * [world:getScreenScale()](#world_getScreenScale)
         * [world:close()](#world_close)
         * [world:isClosed()](#world_isClosed)
    * [View Methods](#view-methods)
@@ -35,6 +36,7 @@
         * [view:setEventFunc()](#view_setEventFunc)
         * [view:getLayoutContext()](#view_getLayoutContext)
         * [view:getDrawContext()](#view_getDrawContext)
+        * [view:getScreenScale()](#view_getScreenScale)
         * [view:close()](#view_close)
         * [view:isClosed()](#view_isClosed)
    * [Backend Methods](#backend-methods)
@@ -365,6 +367,13 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="world_getScreenScale">**`         world:getScreenScale()
+  `**</a>
+  
+  Returns the screen scale factor for the default screen.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="world_close">**`                world:close()
   `**</a>
   
@@ -440,6 +449,13 @@ TODO
   
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_getScreenScale">**`         view:getScreenScale()
+  `**</a>
+  
+  Returns the screen scale factor for the view.
+
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="view_close">**`                view:close()
