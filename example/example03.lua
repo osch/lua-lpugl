@@ -91,9 +91,9 @@ do
     for i = 1, 500 do
         local obj = {}
         objects[i] = obj
-        obj.r  = math.random(10*scale, 30*scale)
-        obj.x  = math.random(obj.r, initialWidth  - 2 * obj.r)
-        obj.y  = math.random(obj.r, initialHeight - 2 * obj.r)
+        obj.r  = math.random(floor(10*scale), floor(30*scale))
+        obj.x  = math.random(obj.r, floor(initialWidth  - 2 * obj.r))
+        obj.y  = math.random(obj.r, floor(initialHeight - 2 * obj.r))
         obj.g  = math.random(1, 3)
         obj.dx = 5 * math.random() / 20 * scale
         obj.dy = 5 * math.random() / 20 * scale
