@@ -233,6 +233,8 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserDa
     switch (event->type) {
         case PUGL_CREATE:             eventName = "CREATE"; break;
         case PUGL_CONFIGURE:          eventName = "CONFIGURE"; break;
+        case PUGL_MAP:                eventName = "MAP"; break;
+        case PUGL_UNMAP:              eventName = "UNMAP"; break;
         case PUGL_BUTTON_PRESS:       eventName = "BUTTON_PRESS"; break;
         case PUGL_BUTTON_RELEASE:     eventName = "BUTTON_RELEASE"; break;
         case PUGL_KEY_PRESS:          eventName = "KEY_PRESS"; break;
@@ -249,9 +251,7 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserDa
         case PUGL_DATA_RECEIVED:      eventName = "DATA_RECEIVED"; break;
         
         case PUGL_NOTHING:
-        case PUGL_DESTROY: // TODO
-        case PUGL_MAP:  // TODO
-        case PUGL_UNMAP: // TODO
+        case PUGL_DESTROY: // TODO?
         case PUGL_UPDATE:
         case PUGL_CLIENT:             eventName = NULL; break;
     }
@@ -953,44 +953,33 @@ static int View_postRedisplay(lua_State* L)
     if (!udata->puglView) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
-    puglPostRedisplay(udata->puglView);
     
-    return 0;
-}
-
-/* ============================================================================================ */
-
-static int View_postRedisplayRect(lua_State* L)
-{
-    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
-
-    if (!udata->puglView) {
-        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    if (lua_gettop(L) > 1) {
+        lua_Number arg_x = luaL_checknumber(L, 2);
+        lua_Number arg_y = luaL_checknumber(L, 3);
+        lua_Number arg_w = luaL_checknumber(L, 4);
+        lua_Number arg_h = luaL_checknumber(L, 5);
+        
+        int x  = (int)floor(arg_x);
+        int y  = (int)floor(arg_y);
+        int w  = (int)ceil(arg_x + arg_w) - x;
+        int h  = (int)ceil(arg_y + arg_h) - y;
+       
+        if (x < 0)  { w += x; x = 0; }
+        if (y < 0)  { h += y; y = 0; }
+    
+        if (w > 0 && h > 0) {
+            PuglRect rect;
+            rect.x      = x;
+            rect.y      = y;
+            rect.width  = w;
+            rect.height = h;
+    
+            puglPostRedisplayRect(udata->puglView, rect);
+        }
+    } else {
+        puglPostRedisplay(udata->puglView);
     }
-    
-    lua_Number arg_x = luaL_checknumber(L, 2);
-    lua_Number arg_y = luaL_checknumber(L, 3);
-    lua_Number arg_w = luaL_checknumber(L, 4);
-    lua_Number arg_h = luaL_checknumber(L, 5);
-    
-    int x  = (int)floor(arg_x);
-    int y  = (int)floor(arg_y);
-    int w  = (int)ceil(arg_x + arg_w) - x;
-    int h  = (int)ceil(arg_y + arg_h) - y;
-   
-    if (x < 0)  { w += x; x = 0; }
-    if (y < 0)  { h += y; y = 0; }
-
-    if (w > 0 && h > 0) {
-        PuglRect rect;
-        rect.x      = x;
-        rect.y      = y;
-        rect.width  = w;
-        rect.height = h;
-
-        puglPostRedisplayRect(udata->puglView, rect);
-    }
-    
     return 0;
 }
 
@@ -1079,7 +1068,6 @@ static const luaL_Reg ViewMethods[] =
     { "setTitle",           View_setTitle        },
     { "getBackend",         View_getBackend      },
     { "postRedisplay",      View_postRedisplay   },
-    { "postRedisplayRect",  View_postRedisplayRect   },
     { "requestClipboard",   View_requestClipboard},
     
     { NULL,           NULL } /* sentinel */
