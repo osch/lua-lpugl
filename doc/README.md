@@ -7,12 +7,14 @@
    * [Module Functions](#module-functions)
         * [lpugl.newWorld()](#lpugl_newWorld)
         * [lpugl.world()](#lpugl_world)
+        * [lpugl.btest()](#lpugl_btest)
         * [lpugl_cairo.newWorld()](#lpugl_cairo_newWorld)
         * [lpugl_cairo.newBackend()](#lpugl_cairo_newBackend)
         * [lpugl_opengl.newWorld()](#lpugl_opengl_newWorld)
         * [lpugl_opengl.newBackend()](#lpugl_opengl_newBackend)
    * [Module Constants](#module-constants)
         * [lpugl.platform](#lpugl_platform)
+        * [Key modifier flags](#lpugl_MOD_)
    * [World Methods](#world-methods)
         * [world:setDefaultBackend()](#world_setDefaultBackend)
         * [world:getDefaultBackend()](#world_getDefaultBackend)
@@ -33,16 +35,27 @@
    * [View Methods](#view-methods)
         * [view:show()](#view_show)
         * [view:hide()](#view_hide)
+        * [view:setMinSize()](#view_setMinSize)
+        * [view:setMaxSize()](#view_setMaxSize)
+        * [view:setSize()](#view_setSize)
+        * [view:getSize()](#view_getSize)
+        * [view:setFrame()](#view_setFrame)
+        * [view:getFrame()](#view_getFrame)
         * [view:setEventFunc()](#view_setEventFunc)
         * [view:getLayoutContext()](#view_getLayoutContext)
         * [view:getDrawContext()](#view_getDrawContext)
         * [view:getScreenScale()](#view_getScreenScale)
+        * [view:postRedisplay()](#view_postRedisplay)
+        * [view:requestClipboard()](#view_requestClipboard)
         * [view:close()](#view_close)
         * [view:isClosed()](#view_isClosed)
    * [Backend Methods](#backend-methods)
         * [cairoBackend:getLayoutContext()](#cairoBackend_getLayoutContext)
    * [Event Processing](#event-processing)
+        * [CREATE](#event_CREATE)
         * [CONFIGURE](#event_CONFIGURE)
+        * [MAP](#event_MAP)
+        * [UNMAP](#event_UNMAP)
         * [EXPOSE](#event_EXPOSE)
         * [BUTTON_PRESS](#event_BUTTON_PRESS)
         * [BUTTON_RELEASE](#event_BUTTON_RELEASE)
@@ -115,6 +128,15 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="lpugl_btest">**`     lpugl.btest(...)
+  `**</a>
+  
+  Returns a boolean signaling whether the bitwise AND of its operands is different from zero. 
+  
+  Can be used to test for [key modifier flags](#lpugl_MOD_) in a key modifier state value.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="lpugl_cairo_newWorld">**`       lpugl_cairo.newWorld(name)
   `**</a>
   
@@ -160,6 +182,23 @@ TODO
   `**</a>
   
   Platform information, contains the string `"X11"`, `"WIN"` or `"MAC"`. 
+
+
+* **<a id="lpugl_MOD_">Key modifier flags</a>**
+
+  The current key modifier state (e.g. as delivered in a [BUTTON_PRESS](#event_BUTTON_PRESS) event) 
+  is an integer value where each key modifier is presented as a bit flag.
+  You may use the function [lpugl.btest()](#lpugl_btest) for testing which
+  flags are set in a key modifier state.
+  
+   * **`lpugl.MOD_SHIFT = 1`**   - Shift key 
+   * **`lpugl.MOD_CTRL = 2`**    - Control key
+   * **`lpugl.MOD_ALT = 4`**     - Alt/Option key
+   * **`lpugl.MOD_SUPER = 8`**   - Mod4/Command/Windows key
+   * **`lpugl.MOD_ALTGR = 16`**  - AltGr key
+
+   
+
 
 TODO
 
@@ -213,14 +252,15 @@ TODO
                  
   The parameter *initArgs* may contain the following parameters as key value pairs:
   
-  * *backend*      - backend object to be used for the created view.
-  * *title*        - title for the created window.
-  * *resizable*    - *true* if the created window should be resizable.
-  * *parent*       - optional parent view. If given the created view is embedded
-                     into the parent view. Otherwise a top level window
-                     is created.
-  * *popupFor*     - TODO
-  * *transientFor* - TODO
+  * *backend*        - backend object to be used for the created view.
+  * *title*          - title for the created window.
+  * *resizable*      - *true* if the created window should be resizable.
+  * *parent*         - optional parent view. If given the created view is embedded
+                       into the parent view. Otherwise a top level window
+                       is created.
+  * *popupFor*       - TODO
+  * *transientFor*   - TODO
+  * *dontMergeRects* - TODO
   
   The parameters *title* and *resizable* have no effect if *parent* or
   *popupFor* is given.
@@ -410,6 +450,58 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="view_setMinSize">**`           view:setMinSize(width, height)
+  `**</a>
+  
+  Sets the minimum size of the view.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_setMaxSize">**`           view:setMaxSize(width, height)
+  `**</a>
+  
+  Sets the maximum size of the view.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_setSize">**`              view:setSize(width, height)
+  `**</a>
+  
+  Sets the size of the view.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_getSize">**`              view:getSize()
+  `**</a>
+  
+  Gets the size of the view. Returns *width*, *height*.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_setFrame">**`             view:setFrame(x, y, width, height)
+  `**</a>
+  
+  Sets the position and size of the view.
+  
+  The position is parent-relative if the view is embedded into a parent view (i.e. 
+  *parent* was given in [world:newView()](#world_newView)). Otherwise the position 
+  is in absolute screen coordinates (the view is a top level window or popup in 
+  these cases).
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_getFrame">**`             view:getFrame()
+  `**</a>
+  
+  Gets the position and size of the view.  Returns *x*, *y*, *width*, *height*. 
+  
+  The position is parent-relative if the view is embedded into a parent view (i.e. 
+  *parent* was given in [world:newView()](#world_newView)). Otherwise the position 
+  is in absolute screen coordinates (the view is a top level window or popup in 
+  these cases).
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="view_setEventFunc">**`         view:setEventFunc(func, ...)
   `**</a>
   
@@ -451,10 +543,27 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getScreenScale">**`         view:getScreenScale()
+* <a id="view_getScreenScale">**`       view:getScreenScale()
   `**</a>
   
   Returns the screen scale factor for the view.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_postRedisplay">**`        view:postRedisplay([x, y, width, height])
+  `**</a>
+  
+  Request a redisplay for the entire view or the given rectangle within the view.
+  
+  * *x*, *y*, *width*, *height*  - optional position and size of the rectangle that should be 
+                                   redisplayed.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_requestClipboard">**`     view:requestClipboard()
+  `**</a>
+  
+  TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -497,66 +606,160 @@ TODO
   The event handling function is called with the following possible events (event names 
   followed by event specific parameters):
 
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="event_CREATE">**`            "CREATE"
+  `**</a>
+
+  View create event.
+
+  This event is sent when a view is realized before it is first displayed,
+  with the graphics context entered.  This is typically used for setting up
+  the graphics system, for example by loading OpenGL extensions.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_CONFIGURE">**`         "CONFIGURE", x, y, width, height
   `**</a>
 
-  TODO
+  View resize or move event.
+
+  A configure event is sent whenever the view is resized or moved.  When a
+  configure event is received, the graphics context is active but not set up
+  for drawing.  For example, it is valid to adjust the OpenGL viewport or
+  otherwise configure the context, but not to draw anything.
   
+  * *x, y*    - new position, parent-relative if the view is embedded into a parent view (i.e. 
+                *parent* was given in [world:newView()](#world_newView)). Otherwise the position 
+                is in absolute screen coordinates (the view is a top level window or popup in 
+                these cases).
+  * *width*, *height*   - new width and height
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="event_MAP">**`               "MAP"
+  `**</a>
+
+  View show event.
+
+  This event is sent when a view is mapped to the screen and made visible.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="event_UNMAP">**`             "UNMAP"
+  `**</a>
+
+  View hide event.
+
+  This event is sent when a view is unmapped from the screen and made
+  invisible.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count
   `**</a>
 
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_BUTTON_PRESS">**`      "BUTTON_PRESS", x, y, button, state
   `**</a>
 
-  TODO
+  Mouse button press event.
   
+  * *x*, *x* - view-relative position of mouse pointer
+  * *button* - button number (1=left, 2=middle, 3=right button)
+  * *state*  - key modifier state, bitwise OR of [key modifier flags](#lpugl_MOD_)
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_BUTTON_RELEASE">**`    "BUTTON_RELEASE", x, y, button, state
   `**</a>
 
-  TODO
+  Mouse button release event.
   
+  * *x*, *x* - view-relative position of mouse pointer
+  * *button* - button number (1=left, 2=middle, 3=right button)
+  * *state*  - key modifier state, bitwise OR of [key modifier flags](#lpugl_MOD_)
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_KEY_PRESS">**`         "KEY_PRESS", keyName, state, text
   `**</a>
 
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_KEY_RELEASE">**`       "KEY_RELEASE", keyName, state, text
   `**</a>
 
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_POINTER_IN">**`        "POINTER_IN", x, y
   `**</a>
 
-  TODO
+  Mouse pointer enter event. This event is sent when the pointer enters the view.
+
+  * *x*, *y*  - view-relative position of mouse pointer
   
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_POINTER_OUT">**`       "POINTER_OUT", x, y
   `**</a>
 
-  TODO
+  Mouse pointer leave event. This event is sent when the pointer leaves the view.
   
+  * *x*, *y*  - view-relative position of mouse pointer
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_MOTION">**`            "MOTION", x, y
   `**</a>
 
-  TODO
+  Mouse pointer motion event.
+
+  * *x*, *y*  - view-relative position of mouse pointer
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_SCROLL">**`            "SCROLL", dx, dy
   `**</a>
 
-  TODO
+  Scroll event.
+
+  The scroll distance is an arbitrary unit that corresponds to a single tick of a detented 
+  mouse wheel. Some devices may send values < 1.0 to allow finer scrolling (not on X11).
   
+  * *dx*  - horizontal scroll distance: a positive value indicates that the content of the view
+            should be moved to the left, a negative value indicates that the content of the view 
+            should be moved to the right.
+
+  * *dy*  - vertical scroll distance: a positive value indicates that the content of the view 
+            should be moved down, a negative value indicates that the content of the view
+            should be moved up.
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_FOCUS_IN">**`          "FOCUS_IN"
   `**</a>
 
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_FOCUS_OUT">**`         "FOCUS_OUT"
   `**</a>
 
   TODO
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="event_CLOSE">**`             "CLOSE"
   `**</a>
   
@@ -565,7 +768,8 @@ TODO
   operation (by just ignoring the event). The view can finally be closed by calling
   method [*view:close()*](#view_close).
 
-TODO
+<!-- ---------------------------------------------------------------------------------------- -->
+
 
 End of document.
 
