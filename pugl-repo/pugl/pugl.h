@@ -505,11 +505,19 @@ typedef struct {
 /**
    Scroll event.
 
-   The scroll distance is expressed in "lines", an arbitrary unit that
-   corresponds to a single tick of a detented mouse wheel.  For example, `dy` =
-   1.0 scrolls 1 line up.  Some systems and devices support finer resolution
-   and/or higher values for fast scrolls, so programs should handle any value
-   gracefully.
+   The scroll distance is an arbitrary unit that corresponds to a single tick of
+   a detented mouse wheel. Some devices may send values < 1.0 to allow finer
+   scrolling (not on X11).
+
+   dx - horizontal scroll distance: a positive value indicates that the content
+        of the view should be moved to the right (i.e. Scroll left), a negative
+        value indicates that  the content of the view should be moved to the
+        left (i.e. Scroll right).
+
+   dy - vertical scroll distance: a positive value indicates that the content of
+        the view should be moved down (i.e. Scroll up), a negative value
+        indicates that the content  of the view should be moved up (i.e. Scroll
+        down).
 */
 typedef struct {
 	PuglEventType       type;      ///< #PUGL_SCROLL

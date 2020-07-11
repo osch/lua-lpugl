@@ -808,11 +808,11 @@ translateEvent(PuglView* view, XEvent xevent)
 				event.scroll.direction = PUGL_SCROLL_DOWN;
 				break;
 			case 6:
-				event.scroll.dx        = -1.0;
+				event.scroll.dx        = 1.0;
 				event.scroll.direction = PUGL_SCROLL_LEFT;
 				break;
 			case 7:
-				event.scroll.dx        = 1.0;
+				event.scroll.dx        = -1.0;
 				event.scroll.direction = PUGL_SCROLL_RIGHT;
 				break;
 			}

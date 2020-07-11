@@ -736,12 +736,12 @@ TODO
   mouse wheel. Some devices may send values < 1.0 to allow finer scrolling (not on X11).
   
   * *dx*  - horizontal scroll distance: a positive value indicates that the content of the view
-            should be moved to the left, a negative value indicates that the content of the view 
-            should be moved to the right.
+            should be moved to the right (i.e. scroll left), a negative value indicates that 
+            the content of the view should be moved to the left (i.e. scroll right).
 
   * *dy*  - vertical scroll distance: a positive value indicates that the content of the view 
-            should be moved down, a negative value indicates that the content of the view
-            should be moved up.
+            should be moved down (i.e. scroll up), a negative value indicates that the content 
+            of the view should be moved up (i.e. scroll down).
 
 
 <!-- ---------------------------------------------------------------------------------------- -->
