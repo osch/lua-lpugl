@@ -69,6 +69,8 @@
 
 #include "pugl/detail/x11_clip.h"
 
+#define PUGL_XC_DEFAULT_ARROW XC_left_ptr
+
 enum WmClientStateMessageAction {
 	WM_STATE_REMOVE,
 	WM_STATE_ADD,
@@ -212,7 +214,7 @@ puglInitViewInternals(void)
 {
 	PuglInternals* impl = (PuglInternals*)calloc(1, sizeof(PuglInternals));
 
-	impl->cursorShape = XC_arrow;
+	impl->cursorShape = PUGL_XC_DEFAULT_ARROW;
 
 	return impl;
 }
@@ -342,8 +344,19 @@ puglDefineCursorShape(PuglView* view, unsigned shape)
 	PuglInternals* const impl    = view->impl;
 	PuglWorld* const     world   = view->world;
 	Display* const       display = world->impl->display;
-	const Cursor         cur     = XCreateFontCursor(display, shape);
-
+	Cursor               cur;
+	if (shape == XC_X_cursor) { // HIDDEN
+	    const char emptyPixmapBytes[] = {0};
+            Pixmap emptyPixmap = XCreateBitmapFromData(display,
+                                                       impl->win, 
+                                                       emptyPixmapBytes, 1, 1);
+            XColor color  = {0, 0, 0, 0, 0, 0};
+	    cur = XCreatePixmapCursor(display, emptyPixmap, emptyPixmap,
+	                              &color, &color, 0, 0);
+            XFreePixmap(display, emptyPixmap);
+	} else {
+	    cur = XCreateFontCursor(display, shape);
+	}
 	if (cur) {
 		XDefineCursor(display, impl->win, cur);
 		XFreeCursor(display, cur);
@@ -1432,13 +1445,14 @@ puglHasClipboard(PuglWorld*  world)
 }
 
 static const unsigned cursor_nums[] = {
-    XC_arrow,             // ARROW
+    PUGL_XC_DEFAULT_ARROW,// ARROW
     XC_xterm,             // CARET
     XC_crosshair,         // CROSSHAIR
     XC_hand2,             // HAND
     XC_pirate,            // NO
     XC_sb_h_double_arrow, // LEFT_RIGHT
     XC_sb_v_double_arrow, // UP_DOWN
+    XC_X_cursor,          // HIDDEN
 };
 
 PuglStatus

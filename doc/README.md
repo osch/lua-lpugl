@@ -46,6 +46,7 @@
         * [view:getDrawContext()](#view_getDrawContext)
         * [view:getScreenScale()](#view_getScreenScale)
         * [view:postRedisplay()](#view_postRedisplay)
+        * [view:setCursor()](#view_setCursor)
         * [view:requestClipboard()](#view_requestClipboard)
         * [view:close()](#view_close)
         * [view:isClosed()](#view_isClosed)
@@ -557,6 +558,25 @@ TODO
   
   * *x*, *y*, *width*, *height*  - optional position and size of the rectangle that should be 
                                    redisplayed.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_setCursor">**`        view:setCursor(type)
+  `**</a>
+  
+  Sets the appearance of the mouse cursor.
+  
+  * *type* mouse cursor type: can be one of the following:
+  
+    * *"ARROW"*      - Default pointing arrow
+    * *"CARET"*      - Caret (I-Beam) for text entry
+    * *"CROSSHAIR"*  - Cross-hair
+    * *"HAND"*       - Hand with a pointing finger
+    * *"NO"*         - Operation not allowed
+    * *"LEFT_RIGHT"* - Left/right arrow for horizontal resize
+    * *"UP_DOWN"*    - Up/down arrow for vertical resize
+    * *"HIDDEN"*     - Invisible cursor
+
 
 <!-- ---------------------------------------------------------------------------------------- -->
 

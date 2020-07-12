@@ -1252,6 +1252,7 @@ typedef enum {
 	PUGL_CURSOR_NO,         ///< Operation not allowed
 	PUGL_CURSOR_LEFT_RIGHT, ///< Left/right arrow for horizontal resize
 	PUGL_CURSOR_UP_DOWN,    ///< Up/down arrow for vertical resize
+	PUGL_CURSOR_HIDDEN,     ///< Invisible pointer
 } PuglCursor;
 
 /**
@@ -1304,8 +1305,7 @@ puglRequestClipboard(PuglView* view);
    Set the mouse cursor.
 
    This changes the system cursor that is displayed when the pointer is inside
-   the view.  May fail if setting the cursor is not supported on this system,
-   for example if compiled on X11 without Xcursor support.
+   the view.  May fail if setting the cursor is not supported on this system.
  */
 PUGL_API PuglStatus
 puglSetCursor(PuglView* view, PuglCursor cursor);

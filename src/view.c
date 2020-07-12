@@ -1026,6 +1026,33 @@ static int View_setTitle(lua_State* L)
 
 /* ============================================================================================ */
 
+static const char* cursorOptions[] = 
+{
+    "ARROW",
+    "CARET",
+    "CROSSHAIR",
+    "HAND",
+    "NO",
+    "LEFT_RIGHT",
+    "UP_DOWN",
+    "HIDDEN",
+    NULL
+};
+
+static int View_setCursor(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    int opt = luaL_checkoption(L, 2, NULL, cursorOptions);
+    puglSetCursor(udata->puglView, (PuglCursor)opt);
+
+    return 0;   
+}
+
+/* ============================================================================================ */
+
 
 static int View_toString(lua_State* L)
 {
@@ -1066,6 +1093,7 @@ static const luaL_Reg ViewMethods[] =
     { "setMinSize",         View_setMinSize      },
     { "setMaxSize",         View_setMaxSize      },
     { "setTitle",           View_setTitle        },
+    { "setCursor",          View_setCursor       },
     { "getBackend",         View_getBackend      },
     { "postRedisplay",      View_postRedisplay   },
     { "requestClipboard",   View_requestClipboard},

@@ -58,9 +58,12 @@ struct PuglInternalsImpl {
 	NSCursor*        cursor;
 	PuglWindow*      window;
 	uint32_t         mods;
+	uint32_t         mouseButtons;
 	bool             posRequested;
 	bool             displayed;
 	bool             mouseTracked;
+	bool             shouldCursorHidden;
+	bool             isCursorHidden;
 };
 
 #endif // PUGL_DETAIL_MAC_H

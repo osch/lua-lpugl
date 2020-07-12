@@ -1533,6 +1533,7 @@ static const char* const cursor_ids[] = {
     IDC_NO,     // NO
     IDC_SIZEWE, // LEFT_RIGHT
     IDC_SIZENS, // UP_DOWN
+    NULL,       // HIDDEN
 };
 
 PuglStatus
@@ -1545,10 +1546,13 @@ puglSetCursor(PuglView* view, PuglCursor cursor)
 	if (index >= count) {
 		return PUGL_BAD_PARAMETER;
 	}
-
-	const HCURSOR cur = LoadCursor(NULL, cursor_ids[index]);
-	if (!cur) {
-		return PUGL_FAILURE;
+	const char* id = cursor_ids[index];
+	HCURSOR cur = NULL;
+	if (id != NULL) {
+		cur = LoadCursor(NULL, id);
+		if (!cur) {
+			return PUGL_FAILURE;
+		}
 	}
 
 	impl->cursor = cur;

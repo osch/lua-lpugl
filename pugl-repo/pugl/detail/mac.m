@@ -280,8 +280,6 @@ rescheduleProcessTimer(PuglWorld* world)
 	NSTrackingArea*            trackingArea;
 	NSMutableAttributedString* markedText;
 	bool                       reshaped;
-	uint32_t                   mouseButtons;
-	bool                       mouseEntered;
 	PuglEventKey*              processingKeyEvent;
 }
 
@@ -440,6 +438,7 @@ keySymToSpecial(const NSEvent* const ev)
 	                                           userInfo:nil];
 	[self addTrackingArea:trackingArea];
 	[super updateTrackingAreas];
+	[self.window invalidateCursorRectsForView:self];
 }
 
 - (NSPoint) eventLocation:(NSEvent*)event
@@ -447,6 +446,11 @@ keySymToSpecial(const NSEvent* const ev)
 	return nsPointFromPoints(puglview,
 	                         [self convertPoint:[event locationInWindow]
 	                                   fromView:nil]);
+}
+
+- (void)resetCursorRects {
+    [super resetCursorRects];
+    [self addCursorRect:self.bounds cursor:puglview->impl->cursor];
 }
 
 static void
@@ -472,15 +476,21 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseEntered:(NSEvent*)event
 {
-	mouseEntered = true;
 	handleCrossing(self, event, PUGL_POINTER_IN);
 	[puglview->impl->cursor set];
+	if (puglview->impl->shouldCursorHidden && !puglview->impl->isCursorHidden) {
+	    [NSCursor hide];
+	    puglview->impl->isCursorHidden = true;
+	}
 	puglview->impl->mouseTracked = true;
 }
 
 - (void) mouseExited:(NSEvent*)event
 {
-	mouseEntered = false;
+	if (puglview->impl->isCursorHidden && !puglview->impl->mouseButtons) {
+	    [NSCursor unhide];
+	    puglview->impl->isCursorHidden = false;
+	}
 	[[NSCursor arrowCursor] set];
 	handleCrossing(self, event, PUGL_POINTER_OUT);
 	puglview->impl->mouseTracked = false;
@@ -501,8 +511,14 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 		getModifiers(event),
 	};
 
-	if (mouseButtons || mouseEntered) {
+	if (puglview->impl->mouseTracked || puglview->impl->mouseButtons) {
 	    puglDispatchEvent(puglview, (PuglEvent*)&ev);
+	}
+	if ( !(puglview->impl->mouseTracked || puglview->impl->mouseButtons)
+	    && puglview->impl->isCursorHidden) 
+	{
+	    [NSCursor unhide];
+	    puglview->impl->isCursorHidden = false;
 	}
 }
 
@@ -537,7 +553,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 		buttonNumber
 	};
 	if (1 <= buttonNumber && buttonNumber <= 32) {
-	    mouseButtons |= (1 << (buttonNumber - 1));
+	    puglview->impl->mouseButtons |= (1 << (buttonNumber - 1));
 	}
 	puglDispatchEvent(puglview, (PuglEvent*)&ev);
 }
@@ -566,9 +582,18 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 		buttonNumber
 	};
 	if (1 <= buttonNumber && buttonNumber <= 32) {
-	    mouseButtons &= ~(1 << (buttonNumber - 1));
+	    puglview->impl->mouseButtons &= ~(1 << (buttonNumber - 1));
 	}
 	puglDispatchEvent(puglview, (PuglEvent*)&ev);
+	if (!puglview->impl->mouseButtons) {
+	    if (!puglview->impl->mouseTracked) {
+                if (puglview->impl->isCursorHidden) {
+                    [NSCursor unhide];
+                    puglview->impl->isCursorHidden = false;
+                }
+                [[NSCursor arrowCursor] set];
+	    }
+	}
 }
 
 - (void) mouseUp:(NSEvent*)event
@@ -1634,6 +1659,7 @@ puglGetNsCursor(const PuglCursor cursor)
 {
 	switch (cursor) {
 	case PUGL_CURSOR_ARROW:
+	case PUGL_CURSOR_HIDDEN:
 		return [NSCursor arrowCursor];
 	case PUGL_CURSOR_CARET:
 		return [NSCursor IBeamCursor];
@@ -1656,14 +1682,26 @@ PuglStatus
 puglSetCursor(PuglView* view, PuglCursor cursor)
 {
 	PuglInternals* const impl = view->impl;
-	NSCursor* const      cur  = puglGetNsCursor(cursor);
+	NSCursor*       cur  = puglGetNsCursor(cursor);
 	if (!cur) {
 		return PUGL_FAILURE;
 	}
         if (impl->cursor) [impl->cursor release];
 	impl->cursor = [cur retain];
-
-	if (impl->mouseTracked) {
+	if (cursor == PUGL_CURSOR_HIDDEN) {
+	    impl->shouldCursorHidden = true;
+	    if (!impl->isCursorHidden && (impl->mouseTracked || impl->mouseButtons)) {
+	        [NSCursor hide];
+	        impl->isCursorHidden = true;
+	    }
+	} else {
+	    impl->shouldCursorHidden = false;
+	    if (impl->isCursorHidden) {
+	        [NSCursor unhide];
+	        impl->isCursorHidden = false;
+	    }
+	}
+	if (impl->mouseTracked || impl->mouseButtons) {
 		[cur set];
 	}
 
