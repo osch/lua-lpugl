@@ -222,10 +222,25 @@ puglInitViewInternals(void)
 static PuglStatus
 puglPollX11Socket(PuglWorld* world, const double timeout0)
 {
-	if (XPending(world->impl->display) > 0) {
-		return PUGL_SUCCESS;
-	}
 	PuglWorldInternals* impl = world->impl;
+	if (XEventsQueued(world->impl->display, QueuedAlready) > 0) {
+	    // evaluate only awake queue
+	    const int afd  = impl->awake_fds[0];
+	    if (afd >= 0) {
+                fd_set fds;
+	        int nfds = afd + 1;
+                FD_ZERO(&fds);
+                FD_SET(afd, &fds);
+                struct timeval tv = {0, 0};
+                int ret = select(nfds, &fds, NULL, NULL, &tv);
+                if  (ret > 0 && FD_ISSET(afd, &fds)) {
+	            impl->needsProcessing = true;
+	            char buf[128];
+	            int ignore = read(afd, buf, sizeof(buf));
+                }
+            }
+            return PUGL_SUCCESS;
+	}
 
 	const int fd   = ConnectionNumber(impl->display);
 	const int afd  = impl->awake_fds[0];
@@ -261,7 +276,7 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
 	if (ret > 0 && afd >= 0 && FD_ISSET(afd, &fds)) {
 	    hasEvents = true;
 	    impl->needsProcessing = true;
-	    char buf[32];
+	    char buf[128];
 	    int ignore = read(afd, buf, sizeof(buf));
 	}
 	if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)) {
@@ -1106,7 +1121,20 @@ flushExposures(PuglWorld* world)
 static PuglStatus
 puglDispatchX11Events(PuglWorld* world)
 {
-	PuglWorldInternals* impl = world->impl;
+        bool wasDispatchingEvents      = world->impl->dispatchingEvents;
+	world->impl->dispatchingEvents = true;
+
+	PuglWorldInternals* impl    = world->impl;
+	Display*            display = impl->display;
+
+
+	if (impl->syncState == 2) {
+	    if (XLastKnownRequestProcessed(display) < impl->syncSerial) {
+	        XSync(display, False); // wait, we are too fast: previous serial0 still not processed
+	    }
+	    impl->syncState = 0;
+	}
+
 	if (    impl->needsProcessing
 	    || (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)))
 	{
@@ -1116,12 +1144,11 @@ puglDispatchX11Events(PuglWorld* world)
 	}
 	const PuglX11Atoms* const atoms = &world->impl->atoms;
 
-	// Flush output to the server once at the start
-	Display* display = world->impl->display;
-	XFlush(display);
+        unsigned long serial0 = NextRequest(display);
 
-	// Process all queued events (without further flushing)
+	// Process all queued events
 	while (XEventsQueued(display, QueuedAfterReading) > 0) {
+
 		XEvent xevent;
 		XNextEvent(display, &xevent);
 
@@ -1208,7 +1235,24 @@ puglDispatchX11Events(PuglWorld* world)
 			puglDispatchEvent(view, &event);
 		}
 	}
+	if (!wasDispatchingEvents) {
+		flushExposures(world);
+		impl->dispatchingEvents = false;
+	}
+        
+        XFlush(display);
 
+        if (impl->syncState == 0) {
+            if (NextRequest(display) != serial0) {
+                impl->syncState = 1; // start waiting for serial0
+                impl->syncSerial = serial0;
+            }
+        }
+        else if (impl->syncState == 1) {
+            if (NextRequest(display) != serial0) {
+                impl->syncState = 2; // next invocation will XSync for previous serial0
+            }
+        }
 	return PUGL_SUCCESS;
 }
 
@@ -1226,9 +1270,6 @@ puglUpdate(PuglWorld* world, double timeout)
 	const double startTime = puglGetTime(world);
 	PuglStatus   st        = PUGL_SUCCESS;
 
-        bool wasDispatchingEvents = world->impl->dispatchingEvents;
-	world->impl->dispatchingEvents = true;
-
 	if (timeout < 0.0) {
 		st = puglPollX11Socket(world, timeout);
 		st = st ? st : puglDispatchX11Events(world);
@@ -1242,11 +1283,6 @@ puglUpdate(PuglWorld* world, double timeout)
 				break;
 			}
 		}
-	}
-
-	if (!wasDispatchingEvents) {
-		flushExposures(world);
-		world->impl->dispatchingEvents = false;
 	}
 
 	return st;

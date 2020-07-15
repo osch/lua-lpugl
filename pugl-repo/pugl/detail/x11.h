@@ -58,6 +58,8 @@ struct PuglWorldInternalsImpl {
 	XIM          xim;
 	Window       pseudoWin;
 	PuglX11IncrTarget incrTarget;
+	unsigned long     syncSerial;
+	int               syncState;
 	double       nextProcessTime;
 	bool         needsProcessing;
 	int          awake_fds[2];
