@@ -39,11 +39,12 @@ application and also in the same window by embedding different view objects.
     local lpugl = require"lpugl_cairo"
     
     local world = lpugl.newWorld("Hello World App")
+    local scale = world:getScreenScale()
     
     local view = world:newView 
     {
         title     = "Hello World Window",
-        size      = {300, 100},
+        size      = {300*scale, 100*scale},
         resizable = true,
         
         eventFunc = function(view, event, ...)
@@ -56,7 +57,7 @@ application and also in the same window by embedding different view objects.
                 cairo:fill()
                 cairo:set_source_rgb(0, 0, 0)
                 cairo:select_font_face("sans-serif", "normal", "normal")
-                cairo:set_font_size(24)
+                cairo:set_font_size(24*scale)
                 local text = "Hello World!"
                 local ext = cairo:text_extents(text)
                 cairo:move_to((w - ext.width)/2, (h - ext.height)/2 + ext.height)

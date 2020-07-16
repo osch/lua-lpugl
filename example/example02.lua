@@ -3,11 +3,12 @@ local gl    = require"luagl"
 local glu   = require"luaglu"
 
 local world = lpugl.newWorld("OpenGL Example App")
+local scale = world:getScreenScale()
 
 local view = world:newView 
 {
     title     = "OpenGL Example Window",
-    size      = {300, 100},
+    size      = {300*scale, 100*scale},
     resizable = true,
 
     eventFunc = function(view, event, ...)
