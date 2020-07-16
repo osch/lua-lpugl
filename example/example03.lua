@@ -154,11 +154,6 @@ do
     end
 end
 
-local view = world:newView {
-    title     = "example03",
-    resizable = true
-}
-view:setSize(initialWidth, initialHeight)
 
 local lastDisplayTime = 0
 
@@ -174,35 +169,42 @@ local processTime = 0
 local processCount = 0
     
 
-
-view:setEventFunc(function(event, ...)
-    if event == "EXPOSE" then
-        local startTime = world:getTime()
-        frameTime = frameTime + startTime - lastRender
-        frameCount = frameCount + 1
-        lastRender = startTime
-
-        local cairo = view:getDrawContext()
-        local w, h  = view:getSize()
-        
-        cairo:set_source_rgb(1.0, 1.0, 1.0)
-        cairo:rectangle(0, 0, w, h)
-        cairo:fill()
-        
-        objects_draw(cairo, w, h)
-        
-        renderStartTime = startTime
-        world:setNextProcessTime(0)
-
-    elseif event == "BUTTON_PRESS" then
-        local bx, by, bn = ...
-        if bn == 1 then
-            objects_push(bx, by)
+local view = world:newView 
+{
+    title     = "example03",
+    size      = {initialWidth, initialHeight},
+    resizable = true,
+    
+    eventFunc = function(view, event, ...)
+        if event == "EXPOSE" then
+            local startTime = world:getTime()
+            frameTime = frameTime + startTime - lastRender
+            frameCount = frameCount + 1
+            lastRender = startTime
+    
+            local cairo = view:getDrawContext()
+            local w, h  = view:getSize()
+            
+            cairo:set_source_rgb(1.0, 1.0, 1.0)
+            cairo:rectangle(0, 0, w, h)
+            cairo:fill()
+            
+            objects_draw(cairo, w, h)
+            
+            renderStartTime = startTime
+            world:setNextProcessTime(0)
+    
+        elseif event == "BUTTON_PRESS" then
+            local bx, by, bn = ...
+            if bn == 1 then
+                objects_push(bx, by)
+            end
+        elseif event == "CLOSE" then
+            view:close()
         end
-    elseif event == "CLOSE" then
-        view:close()
     end
-end)
+}
+
 view:show()
 
 local lastP = world:getTime()

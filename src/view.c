@@ -22,13 +22,9 @@ typedef struct ViewUserData {
     LpuglBackend* backend;
     PuglView*     puglView;
     int           eventFuncNargs;
+    bool          isChild;
+    bool          isPopup;
     bool          drawing;
-
-    bool               pendingCreate;
-    PuglEventConfigure pendingConfigure;
-    bool               ignoreExpose;
-    bool               pendingExpose;
-    
 } ViewUserData;
 
 /* ============================================================================================ */
@@ -154,9 +150,9 @@ static int convertUnicodeCharToUtf8(uint32_t c, char* rsltBuffer)
 
 /* ============================================================================================ */
 
-static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world);
+static PuglStatus handleEvent2(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world);
 
-PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
+static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
 {
     ViewUserData* udata = puglGetHandle(view);
     if (!udata || !udata->world) {
@@ -171,45 +167,9 @@ PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event)
 
     int nargs = udata->eventFuncNargs;
     if (nargs < 0) { // missing event handling function
-        switch (event->type) {
-            case PUGL_CREATE:    udata->pendingCreate = true;              
-                                 break;
-            case PUGL_CONFIGURE: udata->pendingConfigure = event->configure; 
-                                 break;
-            case PUGL_EXPOSE:    udata->pendingExpose = true;
-                                 udata->ignoreExpose = (event->expose.count != 0);
-                                 break;
-            default:             break;
-        }
         return PUGL_SUCCESS;
     }
-    if (udata->pendingCreate) {
-        PuglEventAny ev = {PUGL_CREATE, 0};
-        puglEnterContext(view, false);
-        handleEvent(view, (PuglEvent*)&ev, udata, world);
-        puglLeaveContext(view, false);
-        udata->pendingCreate = false;
-    }
-    if (udata->pendingConfigure.type == PUGL_CONFIGURE) {
-        handleEvent(view, (PuglEvent*)&udata->pendingConfigure, udata, world);
-        udata->pendingConfigure.type = PUGL_NOTHING;
-    }
-    if (udata->ignoreExpose && event->type == PUGL_EXPOSE) {
-        if (event->expose.count == 0) {
-            udata->ignoreExpose = false;
-        } else {
-            return PUGL_SUCCESS;
-        }
-    }
-    if (!udata->ignoreExpose && udata->pendingExpose) {
-        puglPostRedisplay(view);
-        udata->pendingExpose = false;
-    }
-    return handleEvent(view, event, udata, world);
-}
-   
-static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world)
-{
+
     bool wasInCallback = world->inCallback;
     world->inCallback = true;
 
@@ -256,13 +216,14 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserDa
         case PUGL_CLIENT:             eventName = NULL; break;
     }
     if (eventName) {
-        int nargs = udata->eventFuncNargs;
         lua_pushcfunction(L, lpugl_world_errormsghandler);
         int msgh = lua_gettop(L);
         for (int i = 0; i <= nargs; ++i) {
             lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_EVENTFUNC + i);
         }
+        lua_pushvalue(L, udataIdx); ++nargs;
         lua_pushstring(L, eventName); ++nargs;
+        bool lastExposure = false;
         switch (event->type) {
             case PUGL_BUTTON_PRESS:    
             case PUGL_BUTTON_RELEASE: {
@@ -331,6 +292,7 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserDa
                 lua_pushinteger(L, y2 - y1);             ++nargs;
                 lua_pushinteger(L, event->expose.count); ++nargs;
                 udata->drawing = true;
+                lastExposure = (event->expose.count == 0);
                 break;
             }
             case PUGL_CONFIGURE: {
@@ -359,7 +321,7 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event, ViewUserDa
             lpugl_world_close_pugl(world);
         }
     
-        if (udata->drawing) {
+        if (udata->drawing && lastExposure) {
             udata->drawing = false;
             if (lua_rawgeti(L, uservalue, LPUGL_VIEW_UV_DRAWCTX) == LUA_TUSERDATA)
             {                                                     /* -> context */
@@ -430,6 +392,23 @@ static bool checkArgTableValueType(lua_State* L, int argTable, const char* key, 
     }
     return false;
 }
+// value must be on top of stack
+static bool checkArgTableValueType2(lua_State* L, int argTable, const char* key, const char* expectedKey, int expectedType1, int expectedType2)
+{
+    if (strcmp(key, expectedKey) == 0) {
+        if (lua_type(L, -1) == expectedType1 || lua_type(L, -1) == expectedType2) {
+            return true;
+        } else {
+            return luaL_argerror(L, argTable, 
+                                    lua_pushfstring(L, "%s or %s expected as '%s' value, got %s", 
+                                             lua_typename(L, expectedType1),
+                                             lua_typename(L, expectedType2),
+                                             expectedKey, 
+                                             luaL_typename(L, -1)));
+        }
+    }
+    return false;
+}
 
 // value must be on top of stack
 static bool checkArgTableValueUdata(lua_State* L, int argTable, const char* key, const char* expectedKey, const char* expectedType)
@@ -472,7 +451,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
         return lpugl_ERROR_FAILED_OPERATION(L);
     }
     puglSetHandle(udata->puglView, udata);
-    puglSetEventFunc(udata->puglView, lpugl_view_handle_event);
+    puglSetEventFunc(udata->puglView, handleEvent);
     
     lua_pushvalue(L, -1);               /* -> udata, udata */
     lua_rawsetp(L, viewLookup, udata);  /* -> udata */
@@ -490,6 +469,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     
     char* title = NULL;
     LpuglBackend* backend = NULL;
+    bool hasEventFunc = false;
     bool hasTransient = false;
     bool hasPopup = false;
     bool hasParent = false;
@@ -524,6 +504,66 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 dontMergeRects = lua_toboolean(L, -1);
                 puglSetViewHint(udata->puglView, PUGL_DONT_MERGE_RECTS, dontMergeRects);
             }
+            else if (checkArgTableValueType(L, initArg, key, "size", LUA_TTABLE)) 
+            {                                                 /* -> udata, key, value */
+                if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, w */
+                    || lua_rawgeti(L, -2, 2) != LUA_TNUMBER)  /* -> udata, key, value, w, h */
+                {
+                    return luaL_argerror(L, initArg, "invalid 'size' value");
+                }
+                int w = floor(lua_tonumber(L, -2) + 0.5);
+                int h = floor(lua_tonumber(L, -1) + 0.5);
+                lua_pop(L, 2);                                /* -> udata, key, value */
+                
+                puglSetSize(udata->puglView, w, h);
+            }
+            else if (checkArgTableValueType(L, initArg, key, "frame", LUA_TTABLE)) 
+            {                                                 /* -> udata, key, value */
+                if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, x */
+                    || lua_rawgeti(L, -2, 2) != LUA_TNUMBER   /* -> udata, key, value, x, y */
+                    || lua_rawgeti(L, -3, 3) != LUA_TNUMBER   /* -> udata, key, value, x, y, w */
+                    || lua_rawgeti(L, -4, 4) != LUA_TNUMBER)  /* -> udata, key, value, x, y, w, h */
+                {
+                    return luaL_argerror(L, initArg, "invalid 'frame' value");
+                }
+                lua_Number x = lua_tonumber(L, -4);
+                lua_Number y = lua_tonumber(L, -3);
+                lua_Number w = lua_tonumber(L, -2);
+                lua_Number h = lua_tonumber(L, -1);
+                lua_pop(L, 4);                                /* -> udata, key, value */
+                
+                PuglRect rect;
+                rect.x      = floor(x + 0.5);
+                rect.y      = floor(y + 0.5);
+                rect.width  = floor(x + w + 0.5) - rect.x;
+                rect.height = floor(y + h + 0.5) - rect.y;
+                puglSetFrame(udata->puglView, rect);
+            }
+            else if (checkArgTableValueType2(L, initArg, key, "eventFunc", LUA_TTABLE, LUA_TFUNCTION)) 
+            {                                                 /* -> udata, key, value */
+                if (lua_type(L, -1) == LUA_TFUNCTION) {
+                    lua_getuservalue(L, -3);                  /* -> udata, key, value, uservalue */
+                    lua_pushvalue(L, -2);                     /* -> udata, key, value, uservalue, func */
+                    lua_rawseti(L, -2, 0);                    /* -> udata, key, value, uservalue */
+                    udata->eventFuncNargs = 0;
+                    lua_pop(L, 1);                            /* -> udata, key, value */
+                }
+                else {                                        /* -> udata, key, value */
+                    lua_getuservalue(L, -3);                  /* -> udata, key, value, uservalue */
+                    if (lua_rawgeti(L, -2, 1) != LUA_TFUNCTION) {
+                        return luaL_argerror(L, initArg, "invalid 'eventFunc' value");
+                    }                                         /* -> udata, key, value, uservalue, func */
+                    lua_rawseti(L, -2, 0);                    /* -> udata, key, value, uservalue */
+                    size_t nargs = lua_rawlen(L, -2) - 1;
+                    for (int i = 1; i <= nargs; ++i) {        /* -> udata, key, value, uservalue */
+                        lua_rawgeti(L, -2, 1 + i);            /* -> udata, key, value, uservalue, arg */
+                        lua_rawseti(L, -2, i);                /* -> udata, key, value, uservalue */
+                    }
+                    udata->eventFuncNargs = nargs;
+                    lua_pop(L, 1);                            /* -> udata, key, value */
+                }
+                hasEventFunc = true;
+            }
             else if (checkArgTableValueUdata(L, initArg, key, "transientFor", LPUGL_VIEW_CLASS_NAME)
                   || checkArgTableValueUdata(L, initArg, key, "popupFor",     LPUGL_VIEW_CLASS_NAME)
                   || checkArgTableValueUdata(L, initArg, key, "parent",       LPUGL_VIEW_CLASS_NAME))
@@ -538,6 +578,13 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 {
                     luaL_argerror(L, initArg, "only one parameter 'transientFor', 'popupFor' or 'parent' is allowed");
                 }
+                if (isPopup) {
+                    udata->isPopup = true;
+                }
+                if (isChild) {
+                    udata->isChild = true;
+                }
+                
                 hasPopup     = hasPopup     || isPopup;
                 hasTransient = hasTransient || isTransient;
                 hasParent    = hasParent    || isChild;
@@ -615,10 +662,19 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     if (!backend) {
         return luaL_argerror(L, initArg, "missing backend parameter and no default backend available");
     }
+    if (!hasEventFunc) {
+        return luaL_argerror(L, initArg, "missing 'eventFunc' parameter");
+    }
     puglSetBackend(udata->puglView, backend->puglBackend);
     backend->used += 1;
     
     if (title) {
+        if (udata->isPopup) {
+            return luaL_argerror(L, initArg, "Title attribute not allowed for popup views");
+        }
+        else if (udata->isChild) {
+            return luaL_argerror(L, initArg, "Title attribute not allowed for child views");
+        }
         puglSetWindowTitle(udata->puglView, title);
     }
     bool ok = puglRealize(udata->puglView) == PUGL_SUCCESS;
@@ -656,7 +712,9 @@ bool lpugl_view_close(lua_State* L, ViewUserData* udata, int udataIdx)
         lua_pushnil(L);                                         /* -> uservalue, ?, backend, nil */
         lua_rawseti(L, -4, LPUGL_VIEW_UV_BACKEND);              /* -> uservalue, ?, backend */
         lua_pop(L, 3);                                          /* -> */
-        
+
+        lua_pushnil(L);                                         /* -> nil */
+        lua_setuservalue(L, udataIdx);                          /* -> */
     }
     bool wasClosedNow = (udata->world != NULL);
     udata->world = NULL;
@@ -748,43 +806,6 @@ static int View_hide(lua_State* L)
     }
     if (puglHideWindow(udata->puglView) != PUGL_SUCCESS) {
         return lpugl_ERROR_FAILED_OPERATION(L);
-    }
-    return 0;
-}
-
-/* ============================================================================================ */
-
-static int View_setEventFunc(lua_State* L)
-{
-    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
-    if (lua_isnoneornil(L, 2)) {
-        lua_getuservalue(L, 1);     /* -> uservalue */
-        for (int i = 0; i <= udata->eventFuncNargs; ++i) {
-            lua_pushnil(L);         /* -> uservalue, nil */
-            lua_rawseti(L, -2, i);  /* -> uservalue */
-        }
-        udata->eventFuncNargs = -1;
-    }
-    else {
-        if (!udata->puglView) {
-            return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
-        }
-        luaL_checktype(L, 2, LUA_TFUNCTION);
-
-        int nargs = lua_gettop(L) - 2;
-
-        lua_getuservalue(L, 1);       /* -> uservalue */
-        
-        int i;
-        for (i = 0; i <= nargs; ++i) {
-            lua_pushvalue(L, 2 + i); /* -> uservalue, arg */
-            lua_rawseti(L, -2, i);   /* -> uservalue */
-        }
-        for (; i <= udata->eventFuncNargs; ++i) {
-            lua_pushnil(L);          /* -> uservalue, nil */
-            lua_rawseti(L, -2, i);   /* -> uservalue */
-        }
-        udata->eventFuncNargs = nargs;
     }
     return 0;
 }
@@ -1019,6 +1040,12 @@ static int View_setTitle(lua_State* L)
     if (!udata->puglView) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
+    if (udata->isPopup) {
+        return luaL_error(L, "Title attribute not allowed for popup views");
+    }
+    else if (udata->isChild) {
+        return luaL_error(L, "Title attribute not allowed for child views");
+    }
     const char* title = luaL_checkstring(L, 2);
     puglSetWindowTitle(udata->puglView, title);
     return 0;   
@@ -1079,7 +1106,6 @@ static const luaL_Reg ViewMethods[] =
 {
     { "show",               View_show         },
     { "hide",               View_hide         },
-    { "setEventFunc",       View_setEventFunc },
     { "close",              View_close        },
     { "isClosed",           View_isClosed     },
     { "isVisible",          View_isVisible    },

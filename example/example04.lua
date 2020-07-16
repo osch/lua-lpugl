@@ -122,12 +122,6 @@ do
     end
 end
 
-local view = world:newView {
-    title     = "example04",
-    resizable = true
-}
-view:setSize(initialWidth, initialHeight)
-
 local lastDisplayTime = 0
 
 local renderStartTime = nil
@@ -143,36 +137,44 @@ local processCount = 0
     
 local ctx = nil
 
-view:setEventFunc(function(event, ...)
+local view = world:newView 
+{
+    title     = "example04",
+    size      = {initialWidth, initialHeight},
+    resizable = true,
     
-    if event == "CREATE" then
-        ctx = nvg.new("antialias")
+    eventFunc = function(view, event, ...)
+        
+        if event == "CREATE" then
+            ctx = nvg.new("antialias")
+        
+        elseif event == "EXPOSE" then
+            local startTime = world:getTime()
+            frameTime = frameTime + startTime - lastRender
+            frameCount = frameCount + 1
+            lastRender = startTime
     
-    elseif event == "EXPOSE" then
-        local startTime = world:getTime()
-        frameTime = frameTime + startTime - lastRender
-        frameCount = frameCount + 1
-        lastRender = startTime
-
-        local w, h  = view:getSize()
-        ctx:beginFrame(w, h)
-        ctx:clear("#ffffff")
-        objects_draw(ctx, w, h)
-        ctx:endFrame()
-
-        renderStartTime = startTime
-        world:setNextProcessTime(0)
-
-    elseif event == "BUTTON_PRESS" then
-        local bx, by, bn = ...
-        if bn == 1 then
-            objects_push(bx, by)
+            local w, h  = view:getSize()
+            ctx:beginFrame(w, h)
+            ctx:clear("#ffffff")
+            objects_draw(ctx, w, h)
+            ctx:endFrame()
+    
+            renderStartTime = startTime
+            world:setNextProcessTime(0)
+    
+        elseif event == "BUTTON_PRESS" then
+            local bx, by, bn = ...
+            if bn == 1 then
+                objects_push(bx, by)
+            end
+        
+        elseif event == "CLOSE" then
+            view:close()
         end
-    
-    elseif event == "CLOSE" then
-        view:close()
     end
-end)
+}
+
 view:show()
 
 local lastP = world:getTime()

@@ -24,6 +24,5 @@ int lpugl_view_new(lua_State* L, struct LpuglWorld* world, int initArg, int view
 
 bool lpugl_view_close(lua_State* L, struct ViewUserData* udata, int udataIdx);
 
-PuglStatus lpugl_view_handle_event(PuglView* view, const PuglEvent* event);
 
 #endif /* LPUGL_VIEW_H */

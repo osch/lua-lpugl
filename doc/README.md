@@ -35,13 +35,13 @@
    * [View Methods](#view-methods)
         * [view:show()](#view_show)
         * [view:hide()](#view_hide)
+        * [view:setTitle()](#view_setTitle)
         * [view:setMinSize()](#view_setMinSize)
         * [view:setMaxSize()](#view_setMaxSize)
         * [view:setSize()](#view_setSize)
         * [view:getSize()](#view_getSize)
         * [view:setFrame()](#view_setFrame)
         * [view:getFrame()](#view_getFrame)
-        * [view:setEventFunc()](#view_setEventFunc)
         * [view:getLayoutContext()](#view_getLayoutContext)
         * [view:getDrawContext()](#view_getDrawContext)
         * [view:getScreenScale()](#view_getScreenScale)
@@ -187,7 +187,7 @@ TODO
 
 * **<a id="lpugl_MOD_">Key modifier flags</a>**
 
-  The current key modifier state (e.g. as delivered in a [BUTTON_PRESS](#event_BUTTON_PRESS) event) 
+  The current key modifier state (e.g. as delivered in a [*BUTTON_PRESS*](#event_BUTTON_PRESS) event) 
   is an integer value where each key modifier is presented as a bit flag.
   You may use the function [lpugl.btest()](#lpugl_btest) for testing which
   flags are set in a key modifier state.
@@ -246,27 +246,60 @@ TODO
   [*view:close()*](#view_close) or if the world becomes garbage collected or is closed
   explicitly via [*world:close()*](#world_close)
   
-  * *initArgs* - lua table with initial key-value parameters. Can be ommitted, if a
-                 default backend was set via 
-                 [*world:setDefaultBackend()*](#world_setDefaultBackend),
-                 otherwise at least a backend must be given.
+  * *initArgs* - lua table with initial key-value parameters. 
                  
   The parameter *initArgs* may contain the following parameters as key value pairs:
   
-  * *backend*        - backend object to be used for the created view.
-  * *title*          - title for the created window.
-  * *resizable*      - *true* if the created window should be resizable.
-  * *parent*         - optional parent view. If given the created view is embedded
-                       into the parent view. Otherwise a top level window
-                       is created.
-  * *popupFor*       - TODO
-  * *transientFor*   - TODO
-  * *dontMergeRects* - TODO
-  
-  The parameters *title* and *resizable* have no effect if *parent* or
-  *popupFor* is given.
+  * <a id="newView_backend">**`backend = lpuglBackend`**</a> - backend object to be used for the 
+    created view. Can be ommitted, if a default backend was set via 
+    [*world:setDefaultBackend()*](#world_setDefaultBackend)
 
-  Only one of the parameters *parent*, *popupFor* or *transientFor* can be set.
+  * <a id="newView_title">**`title = titleString`**</a> - optional string, initial title for the 
+    created window. This parameter should not be set if [*parent*](#newView_parent) or 
+    [*popupFor*](#newView_popupFor) is given. The title may afterwards be changed using 
+    [*view:setTitle()*](#view_setTitle).
+
+  * <a id="newView_size">**`size = {width, height}`**</a> - optional table containing
+    width and height as first and second table entry. Sets the initial size for the new view.
+    The size may afterwards be changed using [*view:setSize()*](#view_setSize).
+    
+  * <a id="newView_resizable">**`resizable = flag`**</a> - *true* if the created window should be 
+    resizable. This parameter should not be set if [*parent*](#newView_parent) or 
+    [*popupFor*](#newView_popupFor) is given.
+
+  * <a id="newView_parent">**`parent = view`**</a> - optional parent view. If given the created 
+    view is embedded into the parent view. Otherwise a top level window is created. This parameter 
+    cannot be combined with [*popupFor*](#newView_popupFor) or [*transientFor*](#newView_transientFor).
+
+  * <a id="newView_popupFor">**`popupFor = view`**</a>       - TODO - This parameter 
+    cannot be combined with [*parent*](#newView_parent) or [*transientFor*](#newView_transientFor). 
+
+  * <a id="newView_transientFor">**`transientFor = view`**</a>   - TODO - This parameter 
+    cannot be combined with [*parent*](#newView_parent) or [*popupFor*](#newView_popupFor).
+
+  * <a id="newView_dontMergeRects">**`dontMergeRects = flag`**</a> - TODO
+
+  * <a id="newView_eventFunc">**`eventFunc = func | {func, ...}`**</a>  - sets a function for 
+    handling the view's  [event processing](#event-processing). The value for *eventFunc* may
+    be a function or a table with it's first entry being the event handling function. The other
+    entries with index > 1 in this table are context parameters that are given to the
+    event handling function for each invocation.
+    
+    If for the example the event handling function *func* is set up by the following 
+    invocation:
+      ```lua
+      view = world:newView { eventFunc = {func, "foo1", "foo2"} }
+      ```
+      and if an [mouse motion event](#event_MOTION) for the view at position 100, 200 occurs, then 
+      *func* will be called with the arguments `"foo1", "foo2", view, "MOTION", 100, 200`. If
+      the event handling function is set up without context parameters, e.g.:
+      ```lua
+      view = world:newView { eventFunc = func }
+      ```
+      the above mouse motion event would lead to an invocation of *func* with the arguments 
+      `view, "MOTION", 100, 200`.
+      
+    
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -387,7 +420,7 @@ TODO
   
   * *func* - a error reporting function that takes two arguments: first argument is a string
              containing the error message and stack traceback, second argument is the original
-             error object.
+             error object that caused the error.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -451,6 +484,13 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="view_setTitle">**`              view:setTitle(titleString)
+  `**</a>
+  
+  Sets the title of the window.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="view_setMinSize">**`           view:setMinSize(width, height)
   `**</a>
   
@@ -503,32 +543,6 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setEventFunc">**`         view:setEventFunc(func, ...)
-  `**</a>
-  
-  Sets an event handling function for a view.
-  
-  * *func*  - an event handling function. This function will be invoked for
-              any event that occurs for the view.
-  * *...*   - optional context parameters: these arguments are given to the event 
-              handling function for each invocation.
-
-  When an event for the view occurs, the function *func* is called with the optional
-  context parameters as first arguments. After the context parameters, the event name 
-  followed by event specific parameters is given. 
-  
-  *Example:*
-  *  if the event handling function *func* is set by the following invocation:
-  
-      ```lua
-      view:setEventFunc(func, "foo1", "foo2")
-      ```
-      and if an mouse motion event for the view at position 100, 200 occurs, then 
-      *func* will be called with the arguments `"foo1", "foo2", "MOTION", 100, 200`
-  
-  For further details see [*Event Processing*](#event-processing).
-  
-<!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="view_getLayoutContext">**`     view:getLayoutContext()
   `**</a>
@@ -616,12 +630,12 @@ TODO
 <!-- ---------------------------------------------------------------------------------------- -->
 
   Events for a view object are processed by the event handling function that
-  was set with [*view:setEventFunc()*](#view_setEventFunc).
+  was set as [*eventFunc*](#newView_eventFunc) in [*world:newView()*](#world_newView).
   
   When an event for the view occurs, the event handling function is called with the optional
-  context parameters given to [*view:setEventFunc()*](#view_setEventFunc) as first arguments. 
-  After the context parameters, the event name followed by event specific paramters is given
-  to the event handling function.
+  context parameters given to [*eventFunc*](#newView_eventFunc) as first arguments. 
+  After the context parameters, the view and then the event name followed by event specific 
+  paramaters are given to the event handling function.
   
   The event handling function is called with the following possible events (event names 
   followed by event specific parameters):
@@ -650,7 +664,7 @@ TODO
   otherwise configure the context, but not to draw anything.
   
   * *x, y*    - new position, parent-relative if the view is embedded into a parent view (i.e. 
-                *parent* was given in [world:newView()](#world_newView)). Otherwise the position 
+                *parent* was given in [*world:newView()*](#world_newView)). Otherwise the position 
                 is in absolute screen coordinates (the view is a top level window or popup in 
                 these cases).
   * *width*, *height*   - new width and height

@@ -1596,8 +1596,6 @@ puglPollEvents(PuglWorld* world, double timeout);
 PUGL_API PUGL_DEPRECATED_BY("puglUpdate") PuglStatus
 puglDispatchEvents(PuglWorld* world);
 
-#endif  /* PUGL_DISABLE_DEPRECATED */
-
 /**
    Enter the graphics context.
 
@@ -1614,7 +1612,7 @@ puglDispatchEvents(PuglWorld* world);
 
    @deprecated Set up graphics when a #PUGL_CREATE event is received.
 */
-PUGL_API /*PUGL_DEPRECATED_BY("PUGL_CREATE")*/ PuglStatus
+PUGL_API PUGL_DEPRECATED_BY("PUGL_CREATE") PuglStatus
 puglEnterContext(PuglView* view, bool drawing);
 
 /**
@@ -1628,8 +1626,10 @@ puglEnterContext(PuglView* view, bool drawing);
 
    @deprecated Shut down graphics when a #PUGL_DESTROY event is received.
 */
-PUGL_API /*PUGL_DEPRECATED_BY("PUGL_DESTROY")*/ PuglStatus
+PUGL_API PUGL_DEPRECATED_BY("PUGL_DESTROY") PuglStatus
 puglLeaveContext(PuglView* view, bool drawing);
+
+#endif  /* PUGL_DISABLE_DEPRECATED */
 
 
 /**

@@ -1060,7 +1060,7 @@ puglRealize(PuglView* view)
 	const NSScreen* const screen      = [NSScreen mainScreen];
 	const double          scaleFactor = [screen backingScaleFactor];
 
-	const NSRect framePx = rectToNsRect(view->frame);
+	const NSRect framePx = NSMakeRect(view->reqX, view->reqY, view->reqWidth, view->reqHeight);
 	const NSRect framePt = NSMakeRect(framePx.origin.x / scaleFactor,
 	                                  framePx.origin.y / scaleFactor,
 	                                  framePx.size.width / scaleFactor,
@@ -1108,12 +1108,12 @@ puglRealize(PuglView* view)
 			style |= NSResizableWindowMask;
 		}
 
-		PuglWindow* window = [[[PuglWindow alloc]
+		PuglWindow* window = [[PuglWindow alloc]
 			initWithContentRect:rectToScreen([NSScreen mainScreen], framePt)
 			          styleMask:style
 			            backing:NSBackingStoreBuffered
 			              defer:NO
-		              ] retain];
+		              ];
 		[window setPuglview:view];
 
 		if (view->title) {
@@ -1143,7 +1143,9 @@ puglRealize(PuglView* view)
 			                                         view->minAspectX,
 			                                         view->minAspectY)];
 		}
-
+                
+                puglSetSize(view, view->reqWidth, view->reqHeight);
+                
 		[window setContentView:impl->wrapperView];
 		
 		if (view->hints[PUGL_IS_POPUP]) {
