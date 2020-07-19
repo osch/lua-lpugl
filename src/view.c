@@ -705,7 +705,7 @@ bool lpugl_view_close(lua_State* L, ViewUserData* udata, int udataIdx)
 
         puglFreeView(udata->puglView);
         udata->puglView = NULL;
-        
+
         lua_rawgeti(L, -2, LPUGL_VIEW_UV_BACKEND);              /* -> uservalue, ?, backend */
         LpuglBackend* backend = lua_touserdata(L, -1);
         if (backend) backend->used -= 1;       
@@ -713,7 +713,7 @@ bool lpugl_view_close(lua_State* L, ViewUserData* udata, int udataIdx)
         lua_rawseti(L, -4, LPUGL_VIEW_UV_BACKEND);              /* -> uservalue, ?, backend */
         lua_pop(L, 3);                                          /* -> */
 
-        lua_pushnil(L);                                         /* -> nil */
+        lua_newtable(L);                                        /* -> empty table */
         lua_setuservalue(L, udataIdx);                          /* -> */
     }
     bool wasClosedNow = (udata->world != NULL);
