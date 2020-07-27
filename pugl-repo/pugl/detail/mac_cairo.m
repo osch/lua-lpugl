@@ -31,7 +31,9 @@
 #include <assert.h>
 
 
-#define WITHOUT_INTERPOLATION 1
+#ifndef   PUGL_MAC_CAIRO_OPTIMIZED
+  #define PUGL_MAC_CAIRO_OPTIMIZED 1
+#endif
 
 @interface PuglCairoView : NSView
 @end
@@ -42,7 +44,7 @@
 	PuglView*        puglview;
 	cairo_surface_t* surface;
 	cairo_t*         cr;
-	CGSize           surfaceSizePx;
+	PuglRect         surfaceRect;
 }
 
 - (id) initWithFrame:(NSRect)frame
@@ -128,6 +130,21 @@ puglMacCairoDestroy(PuglView* view)
 	return PUGL_SUCCESS;
 }
 
+#if PUGL_MAC_CAIRO_OPTIMIZED
+static void copyRect(unsigned char* dstData, size_t dstBytesPerRow, unsigned char* srcData, size_t srcBytesPerRow,
+                     size_t dstX, size_t dstY, size_t srcX, size_t srcY, size_t w, size_t h)
+{
+    unsigned char* src = srcData + (size_t)(srcY * srcBytesPerRow + 4*srcX);
+    unsigned char* dst = dstData + (size_t)(dstY * dstBytesPerRow + 4*dstX);
+    size_t widthBytes = 4 * w;
+    for (size_t i = 0; i < h; ++i) {
+        memcpy(dst, src, widthBytes);
+        dst += dstBytesPerRow;
+        src += srcBytesPerRow;
+    }
+}
+#endif
+
 static PuglStatus
 puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
@@ -142,13 +159,21 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 
 	const NSSize sizePt  = [drawView bounds].size;
 	const NSSize sizePx  = [drawView convertSizeToBacking: sizePt];
-        drawView->surfaceSizePx = sizePx;
+        drawView->surfaceRect.x      = expose->x;
+        drawView->surfaceRect.y      = expose->y;
+        drawView->surfaceRect.width  = expose->width;
+        drawView->surfaceRect.height = expose->height;
 
-    #if WITHOUT_INTERPOLATION
+    #if PUGL_MAC_CAIRO_OPTIMIZED
+        // CAIRO_FORMAT_RGB24 = each pixel is a 32-bit quantity, with the
+        // upper 8 bits unused. Red, Green, and Blue are stored in the remaining
+        // 24 bits in that order. The 32-bit quantities are stored native-endian.
+
 	drawView->surface = cairo_image_surface_create (
-		CAIRO_FORMAT_RGB24, sizePx.width, sizePx.height);
+		CAIRO_FORMAT_RGB24, expose->width, expose->height);
 
 	drawView->cr = cairo_create(drawView->surface);
+	cairo_translate(drawView->cr, -expose->x, -expose->y);
     #else
 	CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
 	 
@@ -187,39 +212,79 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
             cairo_pop_group_to_source(drawView->cr);
             cairo_paint(drawView->cr);
 
-        #if WITHOUT_INTERPOLATION
-	    const CGSize sizePx  = drawView->surfaceSizePx;
+        #if PUGL_MAC_CAIRO_OPTIMIZED
+	    PuglRect* surfaceRect  = &drawView->surfaceRect;
             
             cairo_surface_flush(drawView->surface);
             
             unsigned char* surfaceData = cairo_image_surface_get_data(drawView->surface);
 
-            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-            
-            CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData, 
-                                                               sizePx.width, 
-                                                               sizePx.height,
-                                                               8, // bitsPerComponent
-                                                               4 * sizePx.width,// inputBytesPerRow, 
-                                                               colorSpace,
-                                                               kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst);
-                                                               //kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault);
-            CGImageRef cgImage = CGBitmapContextCreateImage(bitmapContext);
+            CGContextRef    context     = [[NSGraphicsContext currentContext] graphicsPort];
+            unsigned char*  contextData = CGBitmapContextGetData(context);
+            bool            optimized   = false;
+            if (contextData)
             {
-	        const NSSize sizePt  = [drawView bounds].size;
-                CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
-                CGContextSetInterpolationQuality(context, kCGInterpolationNone);
+                CGColorSpaceRef  colorSpace = [[[view->impl->drawView window] colorSpace] CGColorSpace];
+                CFStringRef      cname      = CGColorSpaceCopyName(colorSpace);
+                CGImageAlphaInfo alphaInfo  = CGBitmapContextGetAlphaInfo(context);
                 
-                CGContextTranslateCTM(context, 0.0, sizePt.height);
-                CGContextScaleCTM(context, 1, -1);
+                int32_t tst = 0xf0000000;
+                bool bigEndian = ((unsigned char*)&tst)[0] == 0xf0;
                 
-                CGContextDrawImage(context, 
-                                   [drawView bounds], 
-                                   cgImage);
+                if (cname) {
+                    if (   CFStringCompare(cname, kCGColorSpaceSRGB, 0) == kCFCompareEqualTo
+                        && CGBitmapContextGetBitsPerPixel(context) == 32
+                        && CGBitmapContextGetBitsPerComponent(context) == 8
+                        && (CGBitmapContextGetBitmapInfo(context) & kCGBitmapByteOrderMask)
+                            == (bigEndian ?  kCGBitmapByteOrder32Big : kCGBitmapByteOrder32Little)
+                        && (   alphaInfo ==  kCGImageAlphaNoneSkipFirst 
+                            || alphaInfo ==  kCGImageAlphaPremultipliedFirst) 
+                        && view->frame.width  == CGBitmapContextGetWidth(context)
+                        && view->frame.height == CGBitmapContextGetHeight(context))
+                    {
+                        optimized = true;
+                    }
+                    CFRelease(cname);
+                }
             }
-            CGImageRelease(cgImage);
-            CGContextRelease(bitmapContext);
-            CGColorSpaceRelease(colorSpace);
+            optimized = false;
+            if (optimized) {
+                size_t srcBytesPerRow  = (size_t)(4 * surfaceRect->width);
+                size_t destBytesPerRow = CGBitmapContextGetBytesPerRow(context);
+                copyRect(contextData, destBytesPerRow, surfaceData, srcBytesPerRow,
+                         expose->x, expose->y, 0, 0, expose->width, expose->height);
+            } else {
+                CGColorSpaceRef colorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+                CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData, 
+                                                                   surfaceRect->width, 
+                                                                   surfaceRect->height,
+                                                                   8, // bitsPerComponent
+                                                                   4 * surfaceRect->width,// inputBytesPerRow, 
+                                                                   colorSpace,
+                                                                   kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst);
+                                                                   //kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault);
+                CGImageRef cgImage = CGBitmapContextCreateImage(bitmapContext);
+                {
+                    const NSSize viewSizePt = [drawView bounds].size;
+                    const NSSize viewSizePx = [drawView convertSizeToBacking: viewSizePt];
+                    CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+                    CGContextSetInterpolationQuality(context, kCGInterpolationNone);
+                    
+                    double scaleFactor = [[view->impl->window screen] backingScaleFactor];
+                    CGContextTranslateCTM(context, 0.0, viewSizePt.height);
+                    CGContextScaleCTM(context, 1/scaleFactor, -1/scaleFactor);
+                    
+                    CGContextDrawImage(context, 
+                                       CGRectMake(expose->x, 
+                                                  viewSizePx.height - expose->y - expose->height, 
+                                                  expose->width, 
+                                                  expose->height), 
+                                       cgImage);
+                }
+                CGImageRelease(cgImage);
+                CGContextRelease(bitmapContext);
+                CGColorSpaceRelease(colorSpace);
+            }
         #endif
             cairo_destroy(drawView->cr);
             cairo_surface_destroy(drawView->surface);

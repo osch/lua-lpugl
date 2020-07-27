@@ -958,7 +958,9 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) resizeTick
 {
-	puglPostRedisplay(puglview);
+	//redisplay works without this
+	//use timer for animations
+	//puglPostRedisplay(puglview);
 }
 
 - (void) viewDidEndLiveResize
@@ -1164,6 +1166,7 @@ puglRealize(PuglView* view)
 			            backing:NSBackingStoreBuffered
 			              defer:NO
 		              ];
+                [window setColorSpace:[NSColorSpace sRGBColorSpace]];
 		[window setPuglview:view];
 
 		if (view->title) {
