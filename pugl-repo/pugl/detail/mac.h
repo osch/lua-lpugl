@@ -64,6 +64,7 @@ struct PuglInternalsImpl {
 	bool             mouseTracked;
 	bool             shouldCursorHidden;
 	bool             isCursorHidden;
+	bool             trySurfaceCache;
 };
 
 #endif // PUGL_DETAIL_MAC_H

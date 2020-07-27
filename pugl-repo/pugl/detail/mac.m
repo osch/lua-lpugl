@@ -23,6 +23,7 @@
 #define GL_SILENCE_DEPRECATION 1
 
 #include "pugl/detail/implementation.h"
+#include "pugl/detail/rect.h"
 #include "pugl/detail/mac.h"
 #include "pugl/pugl.h"
 
@@ -283,7 +284,7 @@ rescheduleProcessTimer(PuglWorld* world)
 	PuglEventKey*              processingKeyEvent;
 }
 
-- (void) dispatchExpose:(NSRect)rect rects:(const NSRect*)nsRects count:(int)count
+- (void) dispatchExpose:(NSRect)rect rects:(const NSRect*)nsRects count:(int)nsRectsCount
 {
         if (!puglview) return;
         
@@ -318,28 +319,40 @@ rescheduleProcessTimer(PuglWorld* world)
 		rect.size.height * scaleFactor,
 		0
 	};
-
-        if (count >= puglview->rectsCapacity) {
-            PuglRect* rects = realloc(puglview->rects, 2 * puglview->rectsCapacity * sizeof(PuglRect));
-            if (!rects) goto fallback;
-            puglview->rects = rects;
-            puglview->rectsCapacity = 2 * puglview->rectsCapacity;
+	if (!puglview->impl->trySurfaceCache) {
+            if (nsRectsCount == 1 && puglview->rectsCount > 1) {
+                // could be that getRectsBeingDrawn is not working (MacOS >= 10.14)
+                // see also https://forum.juce.com/t/juce-coregraphics-render-with-multiple-paint-calls-not-working-on-new-mac-mojave/30905
+                //     or   https://github.com/steinbergmedia/vstgui/commit/245ba880aa807a17aafac515efaeaa92c13f5093
+                puglview->impl->trySurfaceCache = true;
+            } else {
+                puglview->rectsCount = 0;
+                if (nsRectsCount >= puglview->rectsCapacity) {
+                    PuglRect* rects = realloc(puglview->rects, 2 * puglview->rectsCapacity * sizeof(PuglRect));
+                    if (rects) {
+                        puglview->rects = rects;
+                        puglview->rectsCapacity = 2 * puglview->rectsCapacity;
+                    } else {
+                        nsRectsCount = 0;
+                    }
+                }
+                for (int i = 0; i < nsRectsCount; ++i) {
+                    PuglRect* r = puglview->rects + i;
+                    r->x      = nsRects[i].origin.x * scaleFactor;
+                    r->y      = nsRects[i].origin.y * scaleFactor;
+                    r->width  = nsRects[i].size.width * scaleFactor;
+                    r->height = nsRects[i].size.height * scaleFactor;
+                    integerRect(r);
+                }
+                puglview->rectsCount = nsRectsCount;
+            }
         }
-        for (int i = 0; i < count; ++i) {
-            PuglRect* r = puglview->rects + i;
-            r->x      = nsRects[i].origin.x * scaleFactor;
-            r->y      = nsRects[i].origin.y * scaleFactor;
-            r->width  = nsRects[i].size.width * scaleFactor;
-            r->height = nsRects[i].size.height * scaleFactor;
-        }
-        puglview->rectsCount = count;
-        
         puglview->backend->enter(puglview, &ev0);
-        if (puglview->hints[PUGL_DONT_MERGE_RECTS]) {
-            for (int i = 0; i < count; ++i) {
+        if (puglview->hints[PUGL_DONT_MERGE_RECTS] && puglview->rectsCount > 0) {
+            for (int i = 0; i < puglview->rectsCount; ++i) {
                 PuglRect* r = puglview->rects + i;
                 PuglEventExpose e = {
-                    PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, count - 1 - i
+                    PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, puglview->rectsCount - 1 - i
                 };
                 puglDispatchEventInContext(puglview, (PuglEvent*)&e);
             }
@@ -348,9 +361,6 @@ rescheduleProcessTimer(PuglWorld* world)
         }
         puglview->backend->leave(puglview, &ev0);
         puglview->rectsCount = 0;
-        return;
-fallback:        
-	puglDispatchEvent(puglview, (PuglEvent*)&ev0);
 }
 
 - (NSSize) intrinsicContentSize
@@ -1522,18 +1532,25 @@ puglGetTime(const PuglWorld* world)
 PuglStatus
 puglPostRedisplay(PuglView* view)
 {
+	view->rectsCount = 1;
+	PuglRect* r = view->rects;
+                  r->x = 0; r->y = 0; r->width  = ceil(view->frame.width);
+                                      r->height = ceil(view->frame.height);
 	[view->impl->drawView setNeedsDisplay: YES];
 	return PUGL_SUCCESS;
 }
 
 PuglStatus
-puglPostRedisplayRect(PuglView* view, const PuglRect rect)
+puglPostRedisplayRect(PuglView* view, PuglRect rect)
 {
-	const NSRect rectPx = rectToNsRect(rect);
-
-	[view->impl->drawView setNeedsDisplayInRect:nsRectToPoints(view, rectPx)];
-
-	return PUGL_SUCCESS;
+        integerRect(&rect);
+	if (addRect(view, &rect)) {
+	    const NSRect rectPx = rectToNsRect(rect);
+	    [view->impl->drawView setNeedsDisplayInRect:nsRectToPoints(view, rectPx)];
+	    return PUGL_SUCCESS;
+	} else {
+	    return puglPostRedisplay(view);
+	}
 }
 
 PuglNativeView

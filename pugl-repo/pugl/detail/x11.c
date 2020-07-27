@@ -1075,47 +1075,6 @@ mergeExposeEvents(PuglEvent* dst, const PuglRect* src)
 	}
 }
 
-static bool addRect(PuglView* view, PuglRect* rect) 
-{
-    bool added = false;
-    for (int i = 0; i < view->rectsCount; ++i) {
-        if (doesRectContain(view->rects + i, rect)) {
-            added = true;
-            break;
-        }
-    }
-    if (!added) {
-        for (int i = 0; i < view->rectsCount;) {
-            if (doesRectContain(rect, view->rects + i)) {
-                if (!added) {
-                    view->rects[i] = *rect;
-                    added = true;
-                    ++i;
-                } else {
-                    memmove(view->rects + i, view->rects + i + 1, (view->rectsCount - (i + 1)) * sizeof(PuglRect));
-                    view->rectsCount -= 1;
-                }
-            } else {
-                ++i;
-            }
-        }
-    }
-    if (!added) {
-        if (view->rectsCount + 1 >= view->rectsCapacity) {
-            PuglRect* rects = realloc(view->rects, 2 * view->rectsCapacity * sizeof(PuglRect));
-            if (rects) {
-                view->rects = rects;
-                view->rectsCapacity = 2 * view->rectsCapacity;
-            } else {
-                return false;
-            }
-        }
-        view->rects[view->rectsCount] = *rect;
-        view->rectsCount += 1;
-    }
-    return true;
-}
-
 static void
 addPendingExpose(PuglView* view, const PuglEvent* expose)
 {

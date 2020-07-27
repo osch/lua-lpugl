@@ -20,6 +20,7 @@
 */
 
 #include "pugl/detail/implementation.h"
+#include "pugl/detail/rect.h"
 #include "pugl/detail/mac.h"
 #include "pugl/detail/stub.h"
 #include "pugl/pugl_cairo.h"
@@ -32,7 +33,15 @@
 
 
 #ifndef   PUGL_MAC_CAIRO_OPTIMIZED
+  // Speed up for most cases by using cairo software rendering 
+  // instead letting cairo use quartz rendering.
   #define PUGL_MAC_CAIRO_OPTIMIZED 1
+#endif
+#if PUGL_MAC_CAIRO_OPTIMIZED && !defined(PUGL_MAC_CAIRO_OPTIMIZED_CACHE)
+  // Speed up by using surface cache for partial rendering if
+  // getRectsBeingDrawn is not working (MacOS >= 10.14)
+  // see also https://forum.juce.com/t/juce-coregraphics-render-with-multiple-paint-calls-not-working-on-new-mac-mojave/30905
+  #define PUGL_MAC_CAIRO_OPTIMIZED_CACHE 1
 #endif
 
 @interface PuglCairoView : NSView
@@ -44,7 +53,12 @@
 	PuglView*        puglview;
 	cairo_surface_t* surface;
 	cairo_t*         cr;
+#if PUGL_MAC_CAIRO_OPTIMIZED
 	PuglRect         surfaceRect;
+    #if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+	NSTimer*         surfaceTimer;
+    #endif
+#endif
 }
 
 - (id) initWithFrame:(NSRect)frame
@@ -98,7 +112,40 @@
 	return !(puglview->transientParent && puglview->hints[PUGL_IS_POPUP]);
 }
 
+#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+- (void) processSurfaceTimer
+{
+    if (surface) {
+        cairo_surface_destroy(surface);
+        surface = NULL;
+    }
+}
+#endif
+
 @end
+
+#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+static void releaseSurfaceTimer(PuglView* view) 
+{
+    PuglCairoView* drawView = (PuglCairoView*)view->impl->drawView;
+    if (drawView->surfaceTimer) {
+         [drawView->surfaceTimer invalidate];
+         [drawView->surfaceTimer release];
+         drawView->surfaceTimer = NULL;
+    }
+}
+static void rescheduleSurfaceTimer(PuglView* view)
+{
+    PuglCairoView* drawView = (PuglCairoView*)view->impl->drawView;
+    releaseSurfaceTimer(view);
+    drawView->surfaceTimer =
+            [[NSTimer scheduledTimerWithTimeInterval:5
+                                              target:drawView
+                                            selector:@selector(processSurfaceTimer)
+                                            userInfo:nil
+                                             repeats:NO] retain];
+}
+#endif
 
 static PuglStatus
 puglMacCairoCreate(PuglView* view)
@@ -123,6 +170,17 @@ puglMacCairoDestroy(PuglView* view)
 {
 	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
 
+#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+	releaseSurfaceTimer(view);
+#endif
+	if (drawView->cr) {
+	    cairo_destroy(drawView->cr);
+	    drawView->cr = NULL;
+	}
+        if (drawView->surface) {
+            cairo_surface_destroy(drawView->surface);
+            drawView->surface = NULL;
+        }
 	[drawView removeFromSuperview];
 	[drawView release];
 
@@ -148,42 +206,58 @@ static void copyRect(unsigned char* dstData, size_t dstBytesPerRow, unsigned cha
 static PuglStatus
 puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
-	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
+        PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
 
-	assert(!drawView->surface);
-	assert(!drawView->cr);
+        assert(!drawView->cr);
 
-	if (!expose) {
-		return PUGL_SUCCESS;
-	}
+        if (!expose) {
+                return PUGL_SUCCESS;
+        }
 
-	const NSSize sizePt  = [drawView bounds].size;
-	const NSSize sizePx  = [drawView convertSizeToBacking: sizePt];
-        drawView->surfaceRect.x      = expose->x;
-        drawView->surfaceRect.y      = expose->y;
-        drawView->surfaceRect.width  = expose->width;
-        drawView->surfaceRect.height = expose->height;
+        const NSSize sizePt  = [drawView bounds].size;
+        const NSSize sizePx  = [drawView convertSizeToBacking: sizePt];
 
-    #if PUGL_MAC_CAIRO_OPTIMIZED
-        // CAIRO_FORMAT_RGB24 = each pixel is a 32-bit quantity, with the
-        // upper 8 bits unused. Red, Green, and Blue are stored in the remaining
-        // 24 bits in that order. The 32-bit quantities are stored native-endian.
-
-	drawView->surface = cairo_image_surface_create (
-		CAIRO_FORMAT_RGB24, expose->width, expose->height);
-
-	drawView->cr = cairo_create(drawView->surface);
-	cairo_translate(drawView->cr, -expose->x, -expose->y);
+#if PUGL_MAC_CAIRO_OPTIMIZED
+        PuglRect viewRect   = { 0, 0, sizePx.width, sizePx.height };
+        PuglRect exposeRect = { expose->x, expose->y, expose->width, expose->height };
+        
+    #if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+        if (   !drawView->surface
+            || !doesRectContain(&drawView->surfaceRect, &exposeRect)
+            || !doesRectContain(&viewRect, &drawView->surfaceRect))
+        {
+            if (drawView->surface) {
+                cairo_surface_destroy(drawView->surface);
+                drawView->surface = NULL;
+            }
+            if (view->impl->trySurfaceCache) {
+                view->rectsCount = 0;
+            }
     #else
-	CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
-	 
-	CGContextScaleCTM(context, sizePt.width/sizePx.width, sizePt.height/sizePx.height);
+            assert(!drawView->surface);
+    #endif
+            drawView->surfaceRect = exposeRect;
+    
+            drawView->surface = cairo_image_surface_create (
+                    CAIRO_FORMAT_RGB24, expose->width, expose->height);
+                    // CAIRO_FORMAT_RGB24 = each pixel is a 32-bit quantity, with the
+                    // upper 8 bits unused. Red, Green, and Blue are stored in the remaining
+                    // 24 bits in that order. The 32-bit quantities are stored native-endian.
+    #if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+        }
+    #endif
+        drawView->cr = cairo_create(drawView->surface);
+        cairo_translate(drawView->cr, -drawView->surfaceRect.x, -drawView->surfaceRect.y);
+#else
+        CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+         
+        CGContextScaleCTM(context, sizePt.width/sizePx.width, sizePt.height/sizePx.height);
 
-	drawView->surface = cairo_quartz_surface_create_for_cg_context(
-		context, (unsigned)sizePx.width, (unsigned)sizePx.height);
+        drawView->surface = cairo_quartz_surface_create_for_cg_context(
+                context, (unsigned)sizePx.width, (unsigned)sizePx.height);
 
-	drawView->cr = cairo_create(drawView->surface);
-    #endif        
+        drawView->cr = cairo_create(drawView->surface);
+#endif        
         if (view->rectsCount > 0) {
             for (int i = 0; i < view->rectsCount; ++i) {
                 const PuglRect* r = view->rects + i;
@@ -195,8 +269,8 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
         }
         cairo_clip(drawView->cr);
         cairo_push_group_with_content(drawView->cr, CAIRO_CONTENT_COLOR);
-	
-	return PUGL_SUCCESS;
+        
+        return PUGL_SUCCESS;
 }
 
 static PuglStatus
@@ -212,7 +286,10 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
             cairo_pop_group_to_source(drawView->cr);
             cairo_paint(drawView->cr);
 
-        #if PUGL_MAC_CAIRO_OPTIMIZED
+            int32_t tst = 0xf0000000;
+            bool bigEndian = ((unsigned char*)&tst)[0] == 0xf0;
+            
+#if PUGL_MAC_CAIRO_OPTIMIZED
 	    PuglRect* surfaceRect  = &drawView->surfaceRect;
             
             cairo_surface_flush(drawView->surface);
@@ -227,9 +304,6 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
                 CGColorSpaceRef  colorSpace = [[[view->impl->drawView window] colorSpace] CGColorSpace];
                 CFStringRef      cname      = CGColorSpaceCopyName(colorSpace);
                 CGImageAlphaInfo alphaInfo  = CGBitmapContextGetAlphaInfo(context);
-                
-                int32_t tst = 0xf0000000;
-                bool bigEndian = ((unsigned char*)&tst)[0] == 0xf0;
                 
                 if (cname) {
                     if (   CFStringCompare(cname, kCGColorSpaceSRGB, 0) == kCFCompareEqualTo
@@ -247,22 +321,26 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
                     CFRelease(cname);
                 }
             }
-            optimized = false;
             if (optimized) {
                 size_t srcBytesPerRow  = (size_t)(4 * surfaceRect->width);
                 size_t destBytesPerRow = CGBitmapContextGetBytesPerRow(context);
                 copyRect(contextData, destBytesPerRow, surfaceData, srcBytesPerRow,
-                         expose->x, expose->y, 0, 0, expose->width, expose->height);
+                         expose->x, expose->y, 
+                         expose->x - surfaceRect->x, expose->y - surfaceRect->y, 
+                         expose->width, expose->height);
             } else {
                 CGColorSpaceRef colorSpace  = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-                CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData, 
-                                                                   surfaceRect->width, 
-                                                                   surfaceRect->height,
+                CGContextRef bitmapContext = CGBitmapContextCreate(surfaceData 
+                                                                   + (size_t)((expose->y - surfaceRect->y) * 4 * surfaceRect->width) 
+                                                                   + (size_t)((expose->x - surfaceRect->x) * 4), 
+                                                                   expose->width, 
+                                                                   expose->height,
                                                                    8, // bitsPerComponent
                                                                    4 * surfaceRect->width,// inputBytesPerRow, 
                                                                    colorSpace,
-                                                                   kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst);
-                                                                   //kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault);
+                                                                     (bigEndian ? kCGBitmapByteOrder32Big 
+                                                                                : kCGBitmapByteOrder32Little)
+                                                                   | kCGImageAlphaNoneSkipFirst);
                 CGImageRef cgImage = CGBitmapContextCreateImage(bitmapContext);
                 {
                     const NSSize viewSizePt = [drawView bounds].size;
@@ -285,11 +363,20 @@ puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
                 CGContextRelease(bitmapContext);
                 CGColorSpaceRelease(colorSpace);
             }
-        #endif
+#endif
             cairo_destroy(drawView->cr);
-            cairo_surface_destroy(drawView->surface);
             drawView->cr      = NULL;
+#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+            if (view->impl->trySurfaceCache) {
+                rescheduleSurfaceTimer(view);
+            } else {
+                cairo_surface_destroy(drawView->surface);
+                drawView->surface = NULL;
+            }
+#else
+            cairo_surface_destroy(drawView->surface);
             drawView->surface = NULL;
+#endif
         }
 	return PUGL_SUCCESS;
 }
