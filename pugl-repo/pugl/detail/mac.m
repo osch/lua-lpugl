@@ -1107,9 +1107,10 @@ puglRealize(PuglView* view)
 		if (view->hints[PUGL_RESIZABLE]) {
 			style |= NSResizableWindowMask;
 		}
-
+                NSRect contentRect = rectToScreen([NSScreen mainScreen], framePt);
+                
 		PuglWindow* window = [[PuglWindow alloc]
-			initWithContentRect:rectToScreen([NSScreen mainScreen], framePt)
+			initWithContentRect:contentRect
 			          styleMask:style
 			            backing:NSBackingStoreBuffered
 			              defer:NO
@@ -1144,14 +1145,14 @@ puglRealize(PuglView* view)
 			                                         view->minAspectY)];
 		}
                 
-                puglSetSize(view, view->reqWidth, view->reqHeight);
-                
 		[window setContentView:impl->wrapperView];
 		
 		if (view->hints[PUGL_IS_POPUP]) {
 			//[window setLevel:NSPopUpMenuWindowLevel];
 			[window setHasShadow:YES];
 		}
+		[window setFrame:[window frameRectForContentRect: contentRect]
+		         display:NO]; 
 	}
 
 	[impl->wrapperView updateTrackingAreas];
