@@ -324,7 +324,7 @@ rescheduleProcessTimer(PuglWorld* world)
 
 - (NSSize) intrinsicContentSize
 {
-	if (puglview->reqWidth || puglview->reqHeight) {
+	if (puglview && (puglview->reqWidth || puglview->reqHeight)) {
 		return sizePoints(puglview,
 		                  puglview->reqWidth,
 		                  puglview->reqHeight);
@@ -476,6 +476,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseEntered:(NSEvent*)event
 {
+        if (!puglview) return;
+
 	handleCrossing(self, event, PUGL_POINTER_IN);
 	[puglview->impl->cursor set];
 	if (puglview->impl->shouldCursorHidden && !puglview->impl->isCursorHidden) {
@@ -487,6 +489,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseExited:(NSEvent*)event
 {
+        if (!puglview) return;
+
 	if (puglview->impl->isCursorHidden && !puglview->impl->mouseButtons) {
 	    [NSCursor unhide];
 	    puglview->impl->isCursorHidden = false;
@@ -498,6 +502,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseMoved:(NSEvent*)event
 {
+        if (!puglview) return;
+
 	const NSPoint   wloc = [self eventLocation:event];
 	const NSPoint   rloc = [NSEvent mouseLocation];
 	PuglEventMotion ev   = {
@@ -514,7 +520,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 	if (puglview->impl->mouseTracked || puglview->impl->mouseButtons) {
 	    puglDispatchEvent(puglview, (PuglEvent*)&ev);
 	}
-	if ( !(puglview->impl->mouseTracked || puglview->impl->mouseButtons)
+	if (   puglview
+	    && !(puglview->impl->mouseTracked || puglview->impl->mouseButtons)
 	    && puglview->impl->isCursorHidden) 
 	{
 	    [NSCursor unhide];
@@ -560,6 +567,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseDown:(NSEvent*)event
 {
+    if (!puglview) return;
+
     if (puglview->transientParent && puglview->hints[PUGL_IS_POPUP]) {
         [NSApp preventWindowOrdering];
     }
@@ -568,6 +577,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) mouseUp2:(NSEvent*)event button:(uint32_t)buttonNumber
 {
+        if (!puglview) return;
+
 	const NSPoint   wloc = [self eventLocation:event];
 	const NSPoint   rloc = [NSEvent mouseLocation];
 	PuglEventButton ev   = {
@@ -585,7 +596,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 	    puglview->impl->mouseButtons &= ~(1 << (buttonNumber - 1));
 	}
 	puglDispatchEvent(puglview, (PuglEvent*)&ev);
-	if (!puglview->impl->mouseButtons) {
+
+	if (puglview && !puglview->impl->mouseButtons) {
 	    if (!puglview->impl->mouseTracked) {
                 if (puglview->impl->isCursorHidden) {
                     [NSCursor unhide];
@@ -623,6 +635,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) scrollWheel:(NSEvent*)event
 {
+        if (!puglview) return;
+
 	const NSPoint             wloc = [self eventLocation:event];
 	const NSPoint             rloc = [NSEvent mouseLocation];
 	      double              dx   = [event scrollingDeltaX] * 0.1;
@@ -660,7 +674,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) keyDown:(NSEvent*)event
 {
-	if (puglview->hints[PUGL_IGNORE_KEY_REPEAT] && [event isARepeat]) {
+	if (!puglview || (puglview->hints[PUGL_IGNORE_KEY_REPEAT] && [event isARepeat])) {
 		return;
 	}
 
@@ -694,6 +708,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void)keyUp:(NSEvent*)event
 {
+        if (!puglview) return;
 	const NSPoint   wloc  = [self eventLocation:event];
 	const NSPoint   rloc  = [NSEvent mouseLocation];
 	const PuglKey   spec  = keySymToSpecial(event);
@@ -790,6 +805,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 - (void) insertText:(id)string
    replacementRange:(NSRange)replacement
 {
+        if (!puglview) return;
 	(void)replacement;
 
 	NSString* const characters =
@@ -852,6 +868,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) flagsChanged:(NSEvent*)event
 {
+        if (!puglview) return;
 	const uint32_t mods    = getModifiers(event);
 	PuglEventType  type    = PUGL_NOTHING;
 	PuglKey        special = (PuglKey)0;
@@ -903,6 +920,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void) viewWillDraw
 {
+        if (!puglview) return;
 	puglDispatchSimpleEvent(puglview, PUGL_UPDATE);
 	[super viewWillDraw];
 }
@@ -1433,15 +1451,22 @@ puglUpdate(PuglWorld* world, const double timeout)
 		}
 	}
 
-	for (size_t i = 0; i < world->numViews; ++i) {
-		PuglView* const view = world->views[i];
-
-		if ([[view->impl->drawView window] isVisible]) {
-			puglDispatchSimpleEvent(view, PUGL_UPDATE);
-		}
-
-		[view->impl->drawView displayIfNeeded];
-	}
+        // the following does not work, at least not under Mac OS 10.15.5
+        // 1.) Even after setting [view->impl->drawView setNeedsDisplay:YES]
+        //     [view->impl->drawView needsDisplay] gives NO.
+        // 2.) [view->impl->drawView displayIfNeeded] does always invoke drawRect 
+        //     for NSOpenGLView.
+//	for (size_t i = 0; i < world->numViews; ++i) {
+//		PuglView* const view = world->views[i];
+//
+//                bool needed = [view->impl->drawView needsDisplay];
+//
+//		if ([[view->impl->drawView window] isVisible]) {
+//			puglDispatchSimpleEvent(view, PUGL_UPDATE);
+//		}
+//
+//		[view->impl->drawView displayIfNeeded];
+//	}
 
 	return PUGL_SUCCESS;
 }
