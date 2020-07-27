@@ -91,16 +91,10 @@
 	PuglWrapperView* wrapper = (PuglWrapperView*)[self superview];
 	const NSRect* rects = NULL;
 	NSInteger rectCount = 0;
-	if (puglview->hints[PUGL_DONT_MERGE_RECTS]) {
-	    [self getRectsBeingDrawn:&rects count:&rectCount];
-	}
-	if (rects != NULL && rectCount > 0) {
-	    for (int i = 0; i < rectCount; ++i) {
-	        [wrapper dispatchExpose:rects[i] count:rectCount - i - 1];
-	    }
-	} else {
-	    [wrapper dispatchExpose:rect count:0];
-	}
+	// getRectsBeingDrawn does only give one merged rectangle for MacOS >= 10.14 :-(
+	// see also https://forum.juce.com/t/juce-coregraphics-render-with-multiple-paint-calls-not-working-on-new-mac-mojave/30905
+	[self getRectsBeingDrawn:&rects count:&rectCount];
+	[wrapper dispatchExpose:rect rects:rects count:rectCount];
 }
 
 - (BOOL) acceptsFirstMouse:(NSEvent*)event

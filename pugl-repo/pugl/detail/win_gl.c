@@ -259,13 +259,9 @@ puglWinGlEnter(PuglView* view, const PuglEventExpose* expose)
 	wglMakeCurrent(view->impl->hdc, surface->hglrc);
 
 	if (expose) {
-            if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
-                view->impl->hasBeginPaint = false;
-            } else {
                 PAINTSTRUCT ps;
                 BeginPaint(view->impl->hwnd, &ps);
                 view->impl->hasBeginPaint = true;
-            }
 	}
 
 	return PUGL_SUCCESS;

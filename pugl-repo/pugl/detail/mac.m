@@ -283,12 +283,12 @@ rescheduleProcessTimer(PuglWorld* world)
 	PuglEventKey*              processingKeyEvent;
 }
 
-- (void) dispatchExpose:(NSRect)rect count:(int)count
+- (void) dispatchExpose:(NSRect)rect rects:(const NSRect*)nsRects count:(int)count
 {
-	const double scaleFactor = [[NSScreen mainScreen] backingScaleFactor];
-
         if (!puglview) return;
         
+	const double scaleFactor = [[NSScreen mainScreen] backingScaleFactor];
+
 	if (reshaped) {
 		updateViewRect(puglview);
 
@@ -308,18 +308,49 @@ rescheduleProcessTimer(PuglWorld* world)
 	if (![[puglview->impl->drawView window] isVisible]) {
 		return;
 	}
-
-	PuglEventExpose ev = {
+        
+	PuglEventExpose ev0 = {
 		PUGL_EXPOSE,
 		0,
 		rect.origin.x * scaleFactor,
 		rect.origin.y * scaleFactor,
 		rect.size.width * scaleFactor,
 		rect.size.height * scaleFactor,
-		count
+		0
 	};
 
-	puglDispatchEvent(puglview, (PuglEvent*)&ev);
+        if (count >= puglview->rectsCapacity) {
+            PuglRect* rects = realloc(puglview->rects, 2 * puglview->rectsCapacity * sizeof(PuglRect));
+            if (!rects) goto fallback;
+            puglview->rects = rects;
+            puglview->rectsCapacity = 2 * puglview->rectsCapacity;
+        }
+        for (int i = 0; i < count; ++i) {
+            PuglRect* r = puglview->rects + i;
+            r->x      = nsRects[i].origin.x * scaleFactor;
+            r->y      = nsRects[i].origin.y * scaleFactor;
+            r->width  = nsRects[i].size.width * scaleFactor;
+            r->height = nsRects[i].size.height * scaleFactor;
+        }
+        puglview->rectsCount = count;
+        
+        puglview->backend->enter(puglview, &ev0);
+        if (puglview->hints[PUGL_DONT_MERGE_RECTS]) {
+            for (int i = 0; i < count; ++i) {
+                PuglRect* r = puglview->rects + i;
+                PuglEventExpose e = {
+                    PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, count - 1 - i
+                };
+                puglDispatchEventInContext(puglview, (PuglEvent*)&e);
+            }
+        } else {
+            puglDispatchEventInContext(puglview, (PuglEvent*)&ev0);
+        }
+        puglview->backend->leave(puglview, &ev0);
+        puglview->rectsCount = 0;
+        return;
+fallback:        
+	puglDispatchEvent(puglview, (PuglEvent*)&ev0);
 }
 
 - (NSSize) intrinsicContentSize

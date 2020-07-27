@@ -186,7 +186,16 @@ PuglView*
 puglNewView(PuglWorld* const world)
 {
 	PuglView* view = (PuglView*)calloc(1, sizeof(PuglView));
-	if (!view || !(view->impl = puglInitViewInternals())) {
+	if (!view) {
+	    return NULL;
+	}
+	if (!(view->rects = malloc(4 * sizeof(PuglRect)))) {
+	    free(view);
+	    return NULL;
+	}
+	view->rectsCapacity = 4;
+	if (!(view->impl = puglInitViewInternals())) {
+	        free(view->rects);
 		free(view);
 		return NULL;
 	}
@@ -232,6 +241,7 @@ puglFreeView(PuglView* view)
 	free(view->title);
 	free(view->clipboard.data);
 	puglFreeViewInternals(view);
+	free(view->rects);
 	free(view);
 }
 

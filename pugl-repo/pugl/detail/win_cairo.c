@@ -106,12 +106,28 @@ puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
 	if (!expose) {
 	    return PUGL_SUCCESS;
 	}
-	else if (view->hints[PUGL_DONT_MERGE_RECTS] && expose->count > 0) {
-            surface->hasBeginPaint = false;
-        } else {
-	    PAINTSTRUCT ps;
-	    BeginPaint(view->impl->hwnd, &ps);
-            surface->hasBeginPaint = true;
+	else {
+            if (!surface->hasBeginPaint) {
+                PAINTSTRUCT ps;
+                BeginPaint(view->impl->hwnd, &ps);
+                surface->hasBeginPaint = true;
+            }
+            if (!surface->crContext) {
+                puglWinCairoOpen(view);
+	    } else {
+	        cairo_reset_clip(surface->crContext);
+            }
+	    if (view->rectsCount > 0) {
+                for (int i = 0; i < view->rectsCount; ++i) {
+                    const PuglRect* r = view->rects + i;
+                    cairo_rectangle(surface->crContext, r->x, r->y, r->width, r->height);
+                }
+            } else {
+                cairo_rectangle(surface->crContext, expose->x, expose->y, 
+                                                    expose->width, expose->height);
+            }
+            cairo_clip(surface->crContext);
+            cairo_push_group_with_content(surface->crContext, CAIRO_CONTENT_COLOR);
 	}
 	return PUGL_SUCCESS;
 }
@@ -142,12 +158,6 @@ puglWinCairoGetContext(PuglView* view)
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
 
-	if (!surface->crContext) {
-		puglWinCairoOpen(view);
-		if (surface->crContext) {
-			cairo_push_group_with_content(surface->crContext, CAIRO_CONTENT_COLOR_ALPHA);
-		}
-	}
 	return surface->crContext;
 }
 

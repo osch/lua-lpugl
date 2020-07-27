@@ -64,6 +64,9 @@ struct PuglViewImpl {
 	PuglNativeView     parent;
 	uintptr_t          transientParent;
 	PuglRect           frame;
+	PuglRect*          rects;
+	int                rectsCapacity;
+	int                rectsCount;
 	int                reqX;
 	int                reqY;
 	int                reqWidth;

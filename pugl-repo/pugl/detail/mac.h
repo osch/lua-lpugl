@@ -31,7 +31,7 @@
 
 @interface PuglWrapperView : NSView<NSTextInputClient>
 
-- (void) dispatchExpose:(NSRect)rect count:(int)c;
+- (void) dispatchExpose:(NSRect)rect rects:(const NSRect*)rects count:(int)c;
 - (void) setReshaped;
 - (void) clipboardReceived;
 

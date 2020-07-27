@@ -41,6 +41,16 @@
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
+   * [`example05.lua`](./example05.lua)
+
+     An interactive demonstration for partial redrawing using the cairo rendering backend.
+
+
+     ![Screenshot example05](./screenshot05.png)
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
 [OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 [LuaGL]:                    https://luarocks.org/modules/blueowl04/opengl
 [enhanced LuaGL rockspec]:  https://github.com/osch/luarocks-build-extended/blob/master/example/opengl-1.11-2.rockspec

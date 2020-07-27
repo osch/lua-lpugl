@@ -101,6 +101,26 @@ puglX11CairoDestroy(PuglView* view)
 static PuglStatus
 puglX11CairoEnter(PuglView* view, const PuglEventExpose* expose)
 {
+	PuglInternals* const       impl    = view->impl;
+	PuglX11CairoSurface* const surface = (PuglX11CairoSurface*)impl->surface;
+        if (expose) {
+	    if (!surface->crContext) {
+	        puglX11CairoOpen(view);
+	    } else {
+	        cairo_reset_clip(surface->crContext);
+	    }
+	    if (view->rectsCount > 0) {
+                for (int i = 0; i < view->rectsCount; ++i) {
+                    const PuglRect* r = view->rects + i;
+                    cairo_rectangle(surface->crContext, r->x, r->y, r->width, r->height);
+                }
+            } else {
+                cairo_rectangle(surface->crContext, expose->x, expose->y, 
+                                                    expose->width, expose->height);
+            }
+            cairo_clip(surface->crContext);
+            cairo_push_group_with_content(surface->crContext, CAIRO_CONTENT_COLOR);
+        }
 	return PUGL_SUCCESS;
 }
 
@@ -127,12 +147,6 @@ puglX11CairoGetContext(PuglView* view)
 	PuglInternals* const       impl    = view->impl;
 	PuglX11CairoSurface* const surface = (PuglX11CairoSurface*)impl->surface;
 
-	if (!surface->crContext) {
-		puglX11CairoOpen(view);
-		if (surface->crContext) {
-			cairo_push_group_with_content(surface->crContext, CAIRO_CONTENT_COLOR_ALPHA);
-		}
-	}
 	return surface->crContext;
 }
 
