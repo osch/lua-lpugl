@@ -60,7 +60,9 @@
 /* -------------------------------------------------------------------------------------------- */
 
 #if defined(LPUGL_ASYNC_USE_PTHREAD)
-    #define _XOPEN_SOURCE 600 /* must be defined before any other include */
+    #ifndef _XOPEN_SOURCE
+        #define _XOPEN_SOURCE 600 /* must be defined before any other include */
+    #endif
     #include <errno.h>
     #include <sys/time.h>
     #include <pthread.h>
