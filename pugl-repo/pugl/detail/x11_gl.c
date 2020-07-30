@@ -177,7 +177,8 @@ puglX11GlDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglX11GlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose))
+puglX11GlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose),
+                                           PuglRects* PUGL_UNUSED(rects))
 {
 	PuglX11GlSurface* surface = (PuglX11GlSurface*)view->impl->surface;
 	glXMakeCurrent(view->impl->display, view->impl->win, surface->ctx);
@@ -185,7 +186,8 @@ puglX11GlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose))
 }
 
 static PuglStatus
-puglX11GlLeave(PuglView* view, const PuglEventExpose* expose)
+puglX11GlLeave(PuglView* view, const PuglEventExpose* expose,
+                                           PuglRects* PUGL_UNUSED(rects))
 {
 	PuglX11GlSurface* surface = (PuglX11GlSurface*)view->impl->surface;
 

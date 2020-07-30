@@ -22,6 +22,7 @@
 #ifndef PUGL_DETAIL_STUB_H
 #define PUGL_DETAIL_STUB_H
 
+#include "pugl/detail/types.h"
 #include "pugl/pugl.h"
 
 PUGL_BEGIN_DECLS
@@ -48,18 +49,20 @@ puglStubDestroy(PuglView* view)
 }
 
 static inline PuglStatus
-puglStubEnter(PuglView* view, const PuglEventExpose* expose)
+puglStubEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	(void)view;
 	(void)expose;
+	(void)rects;
 	return PUGL_SUCCESS;
 }
 
 static inline PuglStatus
-puglStubLeave(PuglView* view, const PuglEventExpose* expose)
+puglStubLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	(void)view;
 	(void)expose;
+	(void)rects;
 	return PUGL_SUCCESS;
 }
 

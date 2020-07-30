@@ -52,6 +52,12 @@ typedef struct {
 	size_t len;  ///< Length of data in bytes
 } PuglBlob;
 
+typedef struct {
+	PuglRect*          rectsList;
+	int                rectsCapacity;
+	int                rectsCount;
+} PuglRects;
+
 /// Cross-platform view definition
 struct PuglViewImpl {
 	PuglWorld*         world;
@@ -64,9 +70,8 @@ struct PuglViewImpl {
 	PuglNativeView     parent;
 	uintptr_t          transientParent;
 	PuglRect           frame;
-	PuglRect*          rects;
-	int                rectsCapacity;
-	int                rectsCount;
+	PuglRects          rects;
+	PuglRects          rects2;
 	int                reqX;
 	int                reqY;
 	int                reqWidth;
@@ -116,10 +121,10 @@ struct PuglBackendImpl {
 	PuglStatus (*destroy)(PuglView*);
 
 	/// Enter drawing context, for drawing if expose is non-null
-	PuglStatus (*enter)(PuglView*, const PuglEventExpose*);
+	PuglStatus (*enter)(PuglView*, const PuglEventExpose*, PuglRects* rects);
 
 	/// Leave drawing context, after drawing if expose is non-null
-	PuglStatus (*leave)(PuglView*, const PuglEventExpose*);
+	PuglStatus (*leave)(PuglView*, const PuglEventExpose*, PuglRects* rects);
 
 	/// Return the puglGetContext() handle for the application, if any
 	void* (*getContext)(PuglView*);

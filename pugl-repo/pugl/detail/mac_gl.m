@@ -140,7 +140,8 @@ puglMacGlDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglMacGlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose))
+puglMacGlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose),
+                                           PuglRects* PUGL_UNUSED(rects))
 {
 	PuglOpenGLView* const drawView = (PuglOpenGLView*)view->impl->drawView;
 
@@ -149,7 +150,8 @@ puglMacGlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose))
 }
 
 static PuglStatus
-puglMacGlLeave(PuglView* view, const PuglEventExpose* expose)
+puglMacGlLeave(PuglView* view, const PuglEventExpose* expose,
+                               PuglRects* PUGL_UNUSED(rects))
 {
 	PuglOpenGLView* const drawView = (PuglOpenGLView*)view->impl->drawView;
 

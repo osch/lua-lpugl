@@ -204,7 +204,7 @@ static void copyRect(unsigned char* dstData, size_t dstBytesPerRow, unsigned cha
 #endif
 
 static PuglStatus
-puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
+puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
         PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
 
@@ -230,12 +230,12 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
                 cairo_surface_destroy(drawView->surface);
                 drawView->surface = NULL;
             }
-            if (view->impl->trySurfaceCache) {
-                view->rectsCount = 0;
-            }
     #else
             assert(!drawView->surface);
     #endif
+            if (rects && view->impl->trySurfaceCache) {
+                rects->rectsCount = 0;
+            }
             drawView->surfaceRect = exposeRect;
     
             drawView->surface = cairo_image_surface_create (
@@ -258,9 +258,9 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 
         drawView->cr = cairo_create(drawView->surface);
 #endif        
-        if (view->rectsCount > 0) {
-            for (int i = 0; i < view->rectsCount; ++i) {
-                const PuglRect* r = view->rects + i;
+        if (rects && rects->rectsCount > 0) {
+            for (int i = 0; i < rects->rectsCount; ++i) {
+                const PuglRect* r = rects->rectsList + i;
                 cairo_rectangle(drawView->cr, r->x, r->y, r->width, r->height);
             }
         } else {
@@ -274,7 +274,7 @@ puglMacCairoEnter(PuglView* view, const PuglEventExpose* expose)
 }
 
 static PuglStatus
-puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose)
+puglMacCairoLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	PuglCairoView* const drawView = (PuglCairoView*)view->impl->drawView;
 	if (!expose) {

@@ -5,6 +5,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "pugl/detail/implementation.h"
 #include "pugl/pugl.h"
 
 static void integerRect(PuglRect* rect) 
@@ -32,25 +33,26 @@ static inline bool doesRectContain(PuglRect* r1, PuglRect* r2)
         && myY0 <  otherY1  &&  otherY1 <= myY1;
 }
 
-static bool addRect(PuglView* view, PuglRect* rect) 
+static bool addRect(PuglRects* rects, PuglRect* rect) 
 {
     bool added = false;
-    for (int i = 0; i < view->rectsCount; ++i) {
-        if (doesRectContain(view->rects + i, rect)) {
+    for (int i = 0; i < rects->rectsCount; ++i) {
+        if (doesRectContain(rects->rectsList + i, rect)) {
             added = true;
             break;
         }
     }
     if (!added) {
-        for (int i = 0; i < view->rectsCount;) {
-            if (doesRectContain(rect, view->rects + i)) {
+        for (int i = 0; i < rects->rectsCount;) {
+            if (doesRectContain(rect, rects->rectsList + i)) {
                 if (!added) {
-                    view->rects[i] = *rect;
+                    rects->rectsList[i] = *rect;
                     added = true;
                     ++i;
                 } else {
-                    memmove(view->rects + i, view->rects + i + 1, (view->rectsCount - (i + 1)) * sizeof(PuglRect));
-                    view->rectsCount -= 1;
+                    memmove(rects->rectsList + i, rects->rectsList + i + 1, 
+                            (rects->rectsCount - (i + 1)) * sizeof(PuglRect));
+                    rects->rectsCount -= 1;
                 }
             } else {
                 ++i;
@@ -58,17 +60,9 @@ static bool addRect(PuglView* view, PuglRect* rect)
         }
     }
     if (!added) {
-        if (view->rectsCount + 1 >= view->rectsCapacity) {
-            PuglRect* rects = realloc(view->rects, 2 * view->rectsCapacity * sizeof(PuglRect));
-            if (rects) {
-                view->rects = rects;
-                view->rectsCapacity = 2 * view->rectsCapacity;
-            } else {
-                return false;
-            }
+        if (!puglRectsAppend(rects, rect)) {
+            return false;
         }
-        view->rects[view->rectsCount] = *rect;
-        view->rectsCount += 1;
     }
     return true;
 }

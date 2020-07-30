@@ -88,6 +88,15 @@ puglSetInternalClipboard(PuglWorld*  world,
                          const void* data,
                          size_t      len);
 
+PUGL_API_PRIVATE 
+bool puglRectsInit(PuglRects* rects, int capacity);
+
+PUGL_API_PRIVATE 
+bool puglRectsAppend(PuglRects* rects, PuglRect* rect);
+
+PUGL_API_PRIVATE 
+void puglRectsFree(PuglRects* rects);
+
 PUGL_END_DECLS
 
 #endif // PUGL_DETAIL_IMPLEMENTATION_H

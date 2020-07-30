@@ -79,7 +79,6 @@ struct PuglInternalsImpl {
 	PuglSurface* surface;
 	PuglEvent    pendingConfigure;
 	PuglEvent    pendingExpose;
-	bool         sizeChanged;
 	int          screen;
 	unsigned     cursorShape;
 	int          clipboardRequested;

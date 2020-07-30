@@ -98,7 +98,7 @@ puglWinCairoDestroy(PuglView* view)
 }
 
 static PuglStatus
-puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
+puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;
@@ -117,9 +117,9 @@ puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
 	    } else {
 	        cairo_reset_clip(surface->crContext);
             }
-	    if (view->rectsCount > 0) {
-                for (int i = 0; i < view->rectsCount; ++i) {
-                    const PuglRect* r = view->rects + i;
+	    if (rects && rects->rectsCount > 0) {
+                for (int i = 0; i < rects->rectsCount; ++i) {
+                    const PuglRect* r = rects->rectsList + i;
                     cairo_rectangle(surface->crContext, r->x, r->y, r->width, r->height);
                 }
             } else {
@@ -133,7 +133,7 @@ puglWinCairoEnter(PuglView* view, const PuglEventExpose* expose)
 }
 
 static PuglStatus
-puglWinCairoLeave(PuglView* view, const PuglEventExpose* expose)
+puglWinCairoLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglWinCairoSurface* const surface = (PuglWinCairoSurface*)impl->surface;

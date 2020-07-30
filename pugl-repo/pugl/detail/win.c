@@ -865,25 +865,22 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
                 
                 PuglInternals* impl = view->impl;
                 RECT* rects = (RECT*)&data->Buffer;
-                
-                if (count >= view->rectsCapacity) {
-                    PuglRect* rects = realloc(view->rects, 2 * view->rectsCapacity * sizeof(PuglRect));
-                    if (!rects) goto fallback;
-                    view->rects = rects;
-                    view->rectsCapacity = 2 * view->rectsCapacity;
+
+                if (!puglRectsInit(&view->rects, count)) {
+                    goto fallback;
                 }
                 for (int i = 0; i < count; ++i) {
-                    PuglRect* r = view->rects + i;
+                    PuglRect* r = view->rects.rectsList + i;
                     r->x      = rects[i].left;
                     r->y      = rects[i].top;
                     r->width  = rects[i].right - rects[i].left;
                     r->height = rects[i].bottom - rects[i].top;
                 }
-                view->rectsCount = count;
-                view->backend->enter(view, &event.expose);
-                if (view->hints[PUGL_DONT_MERGE_RECTS]) {
-                    for (int i = 0; i < view->rectsCount; ++i) {
-                        PuglRect* r = view->rects + i;
+                view->rects.rectsCount = count;
+                view->backend->enter(view, &event.expose, &view->rects);
+                if (view->hints[PUGL_DONT_MERGE_RECTS]  && count > 0) {
+                    for (int i = 0; i < count; ++i) {
+                        PuglRect* r = view->rects.rectsList + i;
                         PuglEventExpose e = {
                             PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, count - 1 - i
                         };
@@ -892,13 +889,13 @@ handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
                 } else {
                     puglDispatchEventInContext(view, &event);
                 }
-                view->backend->leave(view, &event.expose);
-                view->rectsCount = 0;
+                view->backend->leave(view, &event.expose, &view->rects);
+                view->rects.rectsCount = 0;
                 return 0;
             fallback:
-                view->backend->enter(view, &event.expose);
+                view->backend->enter(view, &event.expose, NULL);
                 puglDispatchEventInContext(view, &event);
-                view->backend->leave(view, &event.expose);
+                view->backend->leave(view, &event.expose, NULL);
                 return 0;
             }
 	case WM_ERASEBKGND:
@@ -1518,7 +1515,7 @@ puglHasClipboard(PuglWorld*  world)
 }
 
 static PuglStatus
-puglWinStubEnter(PuglView* view, const PuglEventExpose* expose)
+puglWinStubEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	if (expose) {
      		PAINTSTRUCT ps;
@@ -1530,7 +1527,7 @@ puglWinStubEnter(PuglView* view, const PuglEventExpose* expose)
 }
 
 static PuglStatus
-puglWinStubLeave(PuglView* view, const PuglEventExpose* expose)
+puglWinStubLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
 	if (expose && view->impl->hasBeginPaint) {
 		PAINTSTRUCT ps;

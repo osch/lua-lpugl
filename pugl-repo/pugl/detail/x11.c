@@ -1080,14 +1080,14 @@ addPendingExpose(PuglView* view, const PuglEvent* expose)
 {
         PuglRect rect = { expose->expose.x, expose->expose.y, expose->expose.width, expose->expose.height };
         integerRect(&rect);
-        bool added = addRect(view, &rect);
+        bool added = addRect(&view->rects, &rect);
         mergeExposeEvents(&view->impl->pendingExpose, &rect);
         if (!added) {
-            view->rects[0].x      = view->impl->pendingExpose.expose.x;
-            view->rects[0].y      = view->impl->pendingExpose.expose.y;
-            view->rects[0].width  = view->impl->pendingExpose.expose.width;
-            view->rects[0].height = view->impl->pendingExpose.expose.height;
-            view->rectsCount = 1;
+            view->rects.rectsList[0].x      = view->impl->pendingExpose.expose.x;
+            view->rects.rectsList[0].y      = view->impl->pendingExpose.expose.y;
+            view->rects.rectsList[0].width  = view->impl->pendingExpose.expose.width;
+            view->rects.rectsList[0].height = view->impl->pendingExpose.expose.height;
+            view->rects.rectsCount = 1;
         }
 }
 
@@ -1117,44 +1117,42 @@ flushExposures(PuglWorld* world)
 		view->impl->pendingConfigure.type = PUGL_NOTHING;
 		view->impl->pendingExpose.type    = PUGL_NOTHING;
 		
-		PuglInternals* impl = view->impl;
-		
-		if (impl->sizeChanged) {
-		    impl->sizeChanged = false;
-		    view->rectsCount = 0; // discard queued exposures
-	            PuglEventExpose fullExpose = {
-		        PUGL_EXPOSE, 0, 0, 0, view->frame.width, view->frame.height, 0
-	            };
-	            view->rectsCount = 0;
-		    view->backend->enter(view, &fullExpose);
-		    puglDispatchEventInContext(view, &configure);
-		    puglDispatchEventInContext(view, (PuglEvent*)&fullExpose);
-		    view->backend->leave(view, &fullExpose);
-		}
-                else {
+                if (configure.type && !expose.type) {
+                    view->backend->enter(view, NULL, NULL);
+                    puglDispatchEventInContext(view, &configure);
+                    view->backend->leave(view, NULL, NULL);
+                }
+                else if (expose.type) {
+                    bool useRects2 =  view->rects.rectsCount > 0
+                                  && (view->rects2.rectsList || puglRectsInit(&view->rects2, 4));
+                    if (useRects2) {
+                        PuglRects swap = view->rects2;
+                        view->rects2  = view->rects;
+                        view->rects = swap;
+                    }
+                    view->rects.rectsCount = 0;
+
+                    view->backend->enter(view, &expose.expose, useRects2 ? &view->rects2 : NULL);
                     if (configure.type) {
-		            view->backend->enter(view, NULL);
-                            puglDispatchEventInContext(view, &configure);
-                            view->backend->leave(view, NULL);
+                        puglDispatchEventInContext(view, &configure);
                     }
-                    if (expose.type) {
-                        view->backend->enter(view, &expose.expose);
-                        if (view->hints[PUGL_DONT_MERGE_RECTS]) {
-                            int n = view->rectsCount;
-                            for (i = 0; i < n; ++i) {
-                                PuglRect* r = view->rects + i;
-                                PuglEventExpose e = {
-                                    PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, n - 1 - i
-                                };
-                                puglDispatchEventInContext(view, (PuglEvent*)&e);
-                            }
-                        } else {
-                            puglDispatchEventInContext(view, &expose);
+                    if (view->hints[PUGL_DONT_MERGE_RECTS] && useRects2) {
+                        int n = view->rects2.rectsCount;
+                        for (i = 0; i < n; ++i) {
+                            PuglRect* r = view->rects2.rectsList + i;
+                            PuglEventExpose e = {
+                                PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, n - 1 - i
+                            };
+                            puglDispatchEventInContext(view, (PuglEvent*)&e);
                         }
-                        view->backend->leave(view, &expose.expose);
-                        view->rectsCount = 0;
+                    } else {
+                        puglDispatchEventInContext(view, &expose);
                     }
-		}
+                    view->backend->leave(view, &expose.expose, useRects2 ? &view->rects2 : NULL);
+                    if (useRects2) {
+                        view->rects2.rectsCount = 0;
+                    }
+                }
 	}
 }
 
@@ -1256,8 +1254,6 @@ puglDispatchX11Events(PuglWorld* world)
 			addPendingExpose(view, &event);
 		} else if (event.type == PUGL_CONFIGURE) {
 			// Expand configure event to be dispatched after loop
-			view->impl->sizeChanged = (  view->frame.width  != event.configure.width
-			                          || view->frame.height != event.configure.height);
 			view->impl->pendingConfigure = event;
 			view->frame.x                = event.configure.x;
 			view->frame.y                = event.configure.y;

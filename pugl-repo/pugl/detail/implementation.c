@@ -28,6 +28,63 @@
 #include <stdlib.h>
 #include <string.h>
 
+bool puglRectsInit(PuglRects* rects, int capacity)
+{
+    if (!rects->rectsList) {
+        PuglRect* list = malloc(capacity * sizeof(PuglRect));
+        if (list) {
+            rects->rectsList     = list;
+            rects->rectsCount    = 0;
+            rects->rectsCapacity = capacity;
+            return true;
+        } else {
+            return false;
+        }
+    } else if (capacity > rects->rectsCapacity) {
+        PuglRect* newList = realloc(rects->rectsList, capacity * sizeof(PuglRect));
+        if (newList) {
+            rects->rectsList     = newList;
+            rects->rectsCount    = 0;
+            rects->rectsCapacity = capacity;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        rects->rectsCount = 0;
+        return true;
+    }
+}
+
+bool puglRectsAppend(PuglRects* rects, PuglRect* rect)
+{
+    if (!rects->rectsList && !puglRectsInit(rects, 1)) {
+        return false;
+    }
+    if (rects->rectsCount == rects->rectsCapacity) {
+        PuglRect* newList = realloc(rects->rectsList, 2 * rects->rectsCapacity * sizeof(PuglRect));
+        if (newList) {
+            rects->rectsList = newList;
+            rects->rectsCapacity = 2 * rects->rectsCapacity;
+        } else {
+            return false;
+        }
+    }
+    rects->rectsList[rects->rectsCount] = *rect;
+    rects->rectsCount += 1;
+    return true;
+}
+
+void puglRectsFree(PuglRects* rects)
+{
+    if (rects->rectsList) {
+        free(rects->rectsList);
+        rects->rectsList = NULL;
+        rects->rectsCount    = 0;
+        rects->rectsCapacity = 0;
+    }
+}
+
 static const char*
 puglLogLevelPrefix(const PuglLogLevel level)
 {
@@ -189,13 +246,12 @@ puglNewView(PuglWorld* const world)
 	if (!view) {
 	    return NULL;
 	}
-	if (!(view->rects = malloc(4 * sizeof(PuglRect)))) {
+	if (!puglRectsInit(&view->rects, 4)) {
 	    free(view);
 	    return NULL;
 	}
-	view->rectsCapacity = 4;
 	if (!(view->impl = puglInitViewInternals())) {
-	        free(view->rects);
+	        puglRectsFree(&view->rects);
 		free(view);
 		return NULL;
 	}
@@ -241,7 +297,8 @@ puglFreeView(PuglView* view)
 	free(view->title);
 	free(view->clipboard.data);
 	puglFreeViewInternals(view);
-	free(view->rects);
+	puglRectsFree(&view->rects2);
+	puglRectsFree(&view->rects);
 	free(view);
 }
 
@@ -320,15 +377,13 @@ puglDispatchEvents(PuglWorld* world)
 	return puglUpdate(world, 0.0);
 }
 
-#endif
-
 PuglStatus
 puglEnterContext(PuglView* view, bool drawing)
 {
 	const PuglEventExpose expose = {
 	    PUGL_EXPOSE, 0, 0.0, 0.0, view->frame.width, view->frame.height, 0};
 
-	view->backend->enter(view, drawing ? &expose : NULL);
+	view->backend->enter(view, drawing ? &expose : NULL, NULL);
 
 	return PUGL_SUCCESS;
 }
@@ -339,10 +394,12 @@ puglLeaveContext(PuglView* view, bool drawing)
 	const PuglEventExpose expose = {
 	    PUGL_EXPOSE, 0, 0.0, 0.0, view->frame.width, view->frame.height, 0};
 
-	view->backend->leave(view, drawing ? &expose : NULL);
+	view->backend->leave(view, drawing ? &expose : NULL, NULL);
 
 	return PUGL_SUCCESS;
 }
+
+#endif
 
 PuglStatus
 puglSetEventFunc(PuglView* view, PuglEventFunc eventFunc)
@@ -431,22 +488,22 @@ puglDispatchEvent(PuglView* view, PuglEvent* event)
 		view->created = true;
 	case PUGL_DESTROY:
 		if (view->created) {
-			view->backend->enter(view, NULL);
+			view->backend->enter(view, NULL, NULL);
 			view->eventFunc(view, event);
-			view->backend->leave(view, NULL);
+			view->backend->leave(view, NULL, NULL);
 		}
 		break;
 	case PUGL_CONFIGURE:
 		if (puglMustConfigure(view, &event->configure)) {
-			view->backend->enter(view, NULL);
+			view->backend->enter(view, NULL, NULL);
 			puglDispatchEventInContext(view, event);
-			view->backend->leave(view, NULL);
+			view->backend->leave(view, NULL, NULL);
 		}
 		break;
 	case PUGL_EXPOSE:
-		view->backend->enter(view, &event->expose);
+		view->backend->enter(view, &event->expose, NULL);
 		view->eventFunc(view, event);
-		view->backend->leave(view, &event->expose);
+		view->backend->leave(view, &event->expose, NULL);
 		break;
 	case PUGL_DATA_RECEIVED:
 		view->eventFunc(view, event);

@@ -817,7 +817,7 @@ static int View_getDrawContext(lua_State* L)
     ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
     
     if (!udata->drawing) {
-        return lpugl_ERROR_ILLEGAL_STATE(L, "not within exposure event handling");
+        return lpugl_ERROR_ILLEGAL_STATE(L, "only allowed within exposure event handling");
     }
     void* ctx = puglGetContext(udata->puglView);
     if (ctx && udata->backend->newDrawContext) {
@@ -974,6 +974,7 @@ static int View_postRedisplay(lua_State* L)
     if (!udata->puglView) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
+    PuglStatus rc = PUGL_SUCCESS;
     
     if (lua_gettop(L) > 1) {
         lua_Number arg_x = luaL_checknumber(L, 2);
@@ -996,10 +997,13 @@ static int View_postRedisplay(lua_State* L)
             rect.width  = w;
             rect.height = h;
     
-            puglPostRedisplayRect(udata->puglView, rect);
+            rc = puglPostRedisplayRect(udata->puglView, rect);
         }
     } else {
-        puglPostRedisplay(udata->puglView);
+        rc = puglPostRedisplay(udata->puglView);
+    }
+    if (rc != PUGL_SUCCESS) {
+        return lpugl_ERROR_FAILED_OPERATION(L);
     }
     return 0;
 }
