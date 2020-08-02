@@ -51,6 +51,17 @@
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
+   * [`example06.lua`](./example06.lua)
+
+     Partial redraw demonstration similar to `example05.lua` using the OpenGL backend with
+     [lua-nanovg].
+
+
+     ![Screenshot example06](./screenshot06.png)
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
 [OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 [LuaGL]:                    https://luarocks.org/modules/blueowl04/opengl
 [enhanced LuaGL rockspec]:  https://github.com/osch/luarocks-build-extended/blob/master/example/opengl-1.11-2.rockspec
