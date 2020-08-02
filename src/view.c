@@ -476,6 +476,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     bool hasParent = false;
     bool isResizable =  false;
     bool dontMergeRects = false;
+    bool useDoubleBuffer = false;
     {
         lua_pushnil(L);                 /* -> udata, nil */
         while (lua_next(L, initArg)) {  /* -> udata, key, value */
@@ -498,7 +499,10 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
             else if (checkArgTableValueType(L, initArg, key, "resizable", LUA_TBOOLEAN))
             {
                 isResizable = lua_toboolean(L, -1);
-                puglSetViewHint(udata->puglView, PUGL_RESIZABLE, isResizable);
+            }
+            else if (checkArgTableValueType(L, initArg, key, "useDoubleBuffer", LUA_TBOOLEAN))
+            {
+                useDoubleBuffer = lua_toboolean(L, -1);
             }
             else if (checkArgTableValueType(L, initArg, key, "dontMergeRects", LUA_TBOOLEAN))
             {
@@ -666,6 +670,8 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     if (!hasEventFunc) {
         return luaL_argerror(L, initArg, "missing 'eventFunc' parameter");
     }
+    puglSetViewHint(udata->puglView, PUGL_RESIZABLE, isResizable);
+    puglSetViewHint(udata->puglView, PUGL_DOUBLE_BUFFER, useDoubleBuffer);
     puglSetBackend(udata->puglView, backend->puglBackend);
     backend->used += 1;
     

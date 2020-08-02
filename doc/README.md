@@ -253,7 +253,7 @@ TODO
   The parameter *initArgs* may contain the following parameters as key value pairs:
   
   * <a id="newView_backend">**`backend = lpuglBackend`**</a> - backend object to be used for the 
-    created view. Can be ommitted, if a default backend was set via 
+    created view. Can be omitted, if a default backend was set via 
     [*world:setDefaultBackend()*](#world_setDefaultBackend)
 
   * <a id="newView_title">**`title = titleString`**</a> - optional string, initial title for the 
@@ -279,7 +279,16 @@ TODO
   * <a id="newView_transientFor">**`transientFor = view`**</a>   - TODO - This parameter 
     cannot be combined with [*parent*](#newView_parent) or [*popupFor*](#newView_popupFor).
 
-  * <a id="newView_dontMergeRects">**`dontMergeRects = flag`**</a> - TODO
+  * <a id="newView_dontMergeRects">**`dontMergeRects = flag`**</a> - if set to *true*, 
+    several [expose events](#event_EXPOSE) will be delivered for one exposure cycle. Otherwise
+    all exposed rectangles in the current cycle will be merged to one larger rectangle that will 
+    be delivered in one single exposure event.
+
+  * <a id="newView_useDoubleBuffer">**`useDoubleBuffer = flag`**</a> - *true* if the created window 
+    should use double buffering. This parameter has only effect for the OpenGL backend.
+    If double buffering is set, partial redrawing is not guaranteed to work, i.e. in this case the
+    function [view:postRedisplay()](#view_postRedisplay) should only be called without
+    specifying a redraw rectangle.
 
   * <a id="newView_eventFunc">**`eventFunc = func | {func, ...}`**</a>  - sets a function for 
     handling the view's  [event processing](#event-processing). The value for *eventFunc* may
@@ -567,14 +576,18 @@ TODO
 * <a id="view_getLayoutContext">**`     view:getLayoutContext()
   `**</a>
   
-  TODO
+  Only for Cairo backend: Gets a Cairo context that can be used for rendering off screen 
+  surfaces or for layout purposes, e.g. obtaining text extents. This context may
+  be used outside or within [exposure event processing](#event_EXPOSE)
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="view_getDrawContext">**`       view:getDrawContext()
   `**</a>
   
-  TODO
+  Only for Cairo backend: Gets the Cairo draw context. This should only be used while
+  [processing exposure events](#event_EXPOSE). The Cairo draw context has already been set up with 
+  clipping for the exposed area of the current exposure cycle.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -591,7 +604,13 @@ TODO
   Request a redisplay for the entire view or the given rectangle within the view.
   
   * *x*, *y*, *width*, *height*  - optional position and size of the rectangle that should be 
-                                   redisplayed.
+                                   redisplayed. If omitted the entire view will be redisplayed.
+  
+  If a view with OpenGL backend was created with [*useDoubleBuffer=true*](#newView_useDoubleBuffer),
+  partial redisplay could lead to undefined behaviour, since the content of the OpenGL back buffer 
+  becomes undefined after back and front buffers are swapped. Therefore *view:postRedisplay()* 
+  should only be invoked without arguments in this case.
+  
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -643,7 +662,9 @@ TODO
 * <a id="cairoBackend_getLayoutContext">**`         cairoBackend:getLayoutContext()
   `**</a>
   
-TODO
+  Gets a Cairo context that can be used for rendering off screen surfaces or for
+  layout purposes, e.g. obtaining text extents. This context may be used
+  outside or within [exposure event processing](#event_EXPOSE)
 
 <!-- ---------------------------------------------------------------------------------------- -->
 ##   Event Processing
@@ -713,7 +734,20 @@ TODO
 * <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count, isFirst
   `**</a>
 
-  TODO
+  * *x*, *y*, *width*, *height* - position and size of the rectangle that should be redisplayed
+                                  in view relative coordinates.
+  * *count*                     - number of pending expose events that are belonging
+                                  to the current exposure cycle. *count=0* if this is the last 
+                                  expose event in the current cycle.
+  * *isFirst*                   - flag with value *true* if this expose event is the first event of 
+                                  the current exposure cycle.
+  
+  If the view was **not** created with [*dontMergeRects=true*](#newView_dontMergeRects), 
+  *count* will always be *0* and *isFirst* will always be *true*.
+  
+  For the Cairo backend, clipping to the exposed area of the current exposure
+  cylce is already set up in the cairo context that can be obtained by
+  [view:getDrawContext()](#view_getDrawContext).
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
