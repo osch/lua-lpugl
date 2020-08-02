@@ -107,7 +107,7 @@ puglX11GlConfigure(PuglView* view)
 	    puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER),
 	    puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES));
 
-	view->world->logFunc(view->world, PUGL_LOG_LEVEL_INFO, msg);
+	puglLog(view->world, PUGL_LOG_LEVEL_INFO, msg);
 
 	XFree(fbc);
 

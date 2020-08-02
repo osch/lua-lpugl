@@ -130,4 +130,12 @@ struct PuglBackendImpl {
 	void* (*getContext)(PuglView*);
 };
 
+static inline void puglLog(PuglWorld* world, PuglLogLevel level, const char* msg)
+{
+	if (level <= world->logLevel && world->logFunc) {
+	    world->logFunc(world, level,  msg);
+	}
+}
+
+
 #endif // PUGL_DETAIL_TYPES_H

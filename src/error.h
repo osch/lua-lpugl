@@ -5,6 +5,7 @@
 
 #define LPUGL_ERROR_ERROR_IN_EVENT_HANDLING  "error_in_event_handling"
 #define LPUGL_ERROR_ERROR_IN_ERROR_HANDLING  "error_in_error_handling"
+#define LPUGL_ERROR_ERROR_IN_LOG_FUNC        "error_in_log_func"
 #define LPUGL_ERROR_OUT_OF_MEMORY            "out_of_memory"
 
 #define LPUGL_ERROR_UNKNOWN_OBJECT           "unknown_object"

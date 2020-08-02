@@ -67,6 +67,68 @@ int lpugl_world_errormsghandler(lua_State* L)
 
 /* ============================================================================================ */
 
+static void lpugl_world_log(PuglWorld*   puglWorld,
+                            PuglLogLevel level,
+                            const char*  msg)
+{
+    LpuglWorld* world = puglGetWorldHandle(puglWorld);
+
+    size_t msgLength = msg ? strlen(msg) : 0;
+    bool hasNewline = (msgLength > 0 && msg[msgLength - 1] == '\n');
+
+    bool handled = false;
+    if (world) {
+        if (world->puglWorld != puglWorld) {
+            fprintf(stderr, "lpugl: internal error in world.c:%d\n", __LINE__);
+            abort();
+        }
+        if (!world->eventL) {
+            fprintf(stderr, "lpugl: internal error in world.c:%d\n", __LINE__);
+            abort();
+        }
+        lua_State* L = world->eventL;
+        int oldTop = lua_gettop(L);
+        lua_checkstack(L, LUA_MINSTACK);
+        
+        lua_pushcfunction(L, lpugl_world_errormsghandler);
+        int msgh = lua_gettop(L);
+        
+        if (   lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef) != LUA_TTABLE /* -> weakWorld */
+            || lua_rawgeti(L, -1, 0) != LUA_TUSERDATA                               /* -> weakWorld, worldUdata */
+            || lua_getuservalue(L, -1) != LUA_TTABLE)                               /* -> weakWorld, worldUdata, worldUservalue */
+        {
+            fprintf(stderr, "lpugl: internal error in world.c:%d\n", __LINE__);
+            abort();
+        }
+        if (lua_rawgeti(L, -1, LPUGL_WORLD_UV_LOGFUNC) == LUA_TFUNCTION)  /* -> weakWorld, worldUdata, worldUservalue, logFunc */
+        {
+            int nargs = 0;
+            switch (level) {
+                case PUGL_LOG_LEVEL_ERR:      lua_pushstring(L, "ERROR");   ++nargs; break;
+                case PUGL_LOG_LEVEL_WARNING:  lua_pushstring(L, "WARNING"); ++nargs; break;
+                case PUGL_LOG_LEVEL_INFO:     lua_pushstring(L, "INFO");    ++nargs; break;
+                case PUGL_LOG_LEVEL_DEBUG:    lua_pushstring(L, "DEBUG");   ++nargs; break;
+                default:                      lua_pushstring(L, "UNKNOWN"); ++nargs; break;
+            }
+            if (msg) {
+                lua_pushlstring(L, msg, hasNewline ? (msgLength - 1) : msgLength); ++nargs;
+            }
+            int rc = lua_pcall(L, nargs, 0, msgh); /* -> weakWorld, worldUdata, worldUservalue, ? */
+            if (rc == 0) {
+                handled = true;
+            } else {
+                lua_rawgeti(L, -1, 1);             /* -> weakWorld, worldUdata, worldUservalue, error, errmsg */
+                fprintf(stderr, 
+                        "lpugl: %s: %s\n", LPUGL_ERROR_ERROR_IN_LOG_FUNC, lua_tostring(L, -1));
+            }
+        }
+        lua_settop(L, oldTop);
+    }
+    if (!handled && level == PUGL_LOG_LEVEL_ERR) {
+        fprintf(stderr, "lpugl: %s%s", msg, hasNewline?"":"\n");
+    }
+}
+
 static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
 {
     LpuglWorld* world = voidData;
@@ -97,7 +159,7 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
         || lua_getuservalue(L, -1) != LUA_TTABLE                                /* -> weakWorld, worldUdata, worldUservalue */
         || lua_rawgeti(L, -1, LPUGL_WORLD_UV_PROCFUNC) != LUA_TFUNCTION)        /* -> weakWorld, worldUdata, worldUservalue, procFunc */
     {
-        fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
+        fprintf(stderr, "lpugl: internal error in world.c:%d\n", __LINE__);
         abort();
     }
     int rc = lua_pcall(L, 0, 0, msgh);                                      /* -> weakWorld, worldUdata, worldUservalue, ? */
@@ -119,7 +181,7 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
             } else {                                                        /* -> weakWorld, worldUdata, worldUservalue, error, error2 */
                 lua_rawgeti(L, -1, 1);                                      /* -> weakWorld, worldUdata, worldUservalue, error, error2, errmsg2 */
                 fprintf(stderr, 
-                        "%s: %s\n", LPUGL_ERROR_ERROR_IN_ERROR_HANDLING,
+                        "lpugl: %s: %s\n", LPUGL_ERROR_ERROR_IN_ERROR_HANDLING,
                         lua_tostring(L, -1));
                 lua_pop(L, 2);                                              /* -> weakWorld, worldUdata, worldUservalue, error */
             }
@@ -129,7 +191,7 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
         if (!handled) {                                                     /* -> weakWorld, worldUdata, worldUservalue, error */
             lua_rawgeti(L, -1, 1);                                          /* -> weakWorld, worldUdata, worldUservalue, error, errmsg */
             fprintf(stderr, 
-                    "%s: %s\n", LPUGL_ERROR_ERROR_IN_EVENT_HANDLING,
+                    "lpugl: %s: %s\n", LPUGL_ERROR_ERROR_IN_EVENT_HANDLING,
                     lua_tostring(L, -1));
             abort();
         }                                                                   /* -> weakWorld, worldUdata, worldUservalue, error */
@@ -227,6 +289,8 @@ static int Lpugl_newWorld(lua_State* L)
     lua_rawseti(L, -2, LPUGL_WORLD_UV_EVENTL);       /* -> world, uservalue */
     lua_setuservalue(L, -2);                        /* -> world */
     
+    puglSetWorldHandle(world->puglWorld, world); // world userdata
+    puglSetLogFunc(world->puglWorld, lpugl_world_log);
     puglSetProcessFunc(world->puglWorld, lpugl_world_process, world);
     return 1;
 }
@@ -629,6 +693,61 @@ static int World_setProcessFunc(lua_State* L)
 
 /* ============================================================================================ */
 
+static int World_setLogFunc(lua_State* L)
+{
+    WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
+    LpuglWorld* world = udata->world;
+    if (udata->restricted) {
+        return lpugl_ERROR_RESTRICTED_ACCESS(L);
+    }
+    if (!world) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }    
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    
+    lua_getuservalue(L, 1);                      /* -> uservalue */
+    lua_pushvalue(L, 2);                         /* -> uservalue, procFunc */
+    lua_rawseti(L, -2, LPUGL_WORLD_UV_LOGFUNC);  /* -> uservalue */
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static const char* logLevels[] = 
+{
+    "NONE",
+    "ERROR",
+    "WARNING",
+    "INFO",
+    "DEBUG",
+    NULL
+};
+
+static int World_setLogLevel(lua_State* L)
+{
+    WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
+    LpuglWorld* world = udata->world;
+    if (udata->restricted) {
+        return lpugl_ERROR_RESTRICTED_ACCESS(L);
+    }
+    if (!world) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }    
+    int opt = luaL_checkoption(L, 2, NULL, logLevels);
+    PuglLogLevel level;
+    switch (opt) {
+        case 0:  level = 0;                      break;
+        case 1:  level = PUGL_LOG_LEVEL_ERR;     break;
+        case 2:  level = PUGL_LOG_LEVEL_WARNING; break;
+        case 3:  level = PUGL_LOG_LEVEL_INFO;    break;
+        default: level = PUGL_LOG_LEVEL_DEBUG;   break;
+    }
+    puglSetLogLevel(world->puglWorld, level);
+    return 0;
+}
+
+/* ============================================================================================ */
+
 static int World_setErrorFunc(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
@@ -763,10 +882,12 @@ static const luaL_Reg WorldMethods[] =
     { "hasViews",           World_hasViews           },
     { "viewList",           World_viewList           },
     { "setProcessFunc",     World_setProcessFunc     },
-    { "setErrorFunc",       World_setErrorFunc       },
     { "setNextProcessTime", World_setNextProcessTime },
     { "awake",              World_awake              },
     { "getTime",            World_getTime            },
+    { "setErrorFunc",       World_setErrorFunc       },
+    { "setLogFunc",         World_setLogFunc         },
+    { "setLogLevel",        World_setLogLevel        },
     { "setClipboard",       World_setClipboard       },
     { "hasClipboard",       World_hasClipboard       },
     { "getScreenScale",     World_getScreenScale     },

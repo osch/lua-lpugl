@@ -27,6 +27,8 @@
         * [world:awake()](#world_awake)
         * [world:getTime()](#world_getTime)
         * [world:setErrorFunc()](#world_setErrorFunc)
+        * [world:setLogLevel()](#world_setLogLevel)
+        * [world:setLogFunc()](#world_setLogFunc)
         * [world:setClipboard()](#world_setClipboard)
         * [world:hasClipboard()](#world_hasClipboard)
         * [world:getScreenScale()](#world_getScreenScale)
@@ -422,6 +424,24 @@ TODO
              containing the error message and stack traceback, second argument is the original
              error object that caused the error.
   
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="world_setLogLevel">**`          world:setLogLevel(logLevel)
+  `**</a>
+  
+  * *logLevel* - string, valid values: *"NONE"*, *"ERROR"*, *"WARNING"*, *"INFO"*, *"DEBUG"*.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="world_setLogFunc">**`           world:setLogFunc(func)
+  `**</a>
+  
+  * *func* - log function, this function is invoked with arguments *logLevel*, *logMessage*
+             for each log message that has a log level according to the log 
+             level set with *world:setLogLevel()*.
+  
+  If no log function is set, log messages with level *"ERROR"* are written to stderr.
+
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="world_setClipboard">**`         world:setClipboard(text)

@@ -14,8 +14,9 @@
 #define LPUGL_WORLD_UV_ERRFUNC    2
 #define LPUGL_WORLD_UV_EVENTL     3
 #define LPUGL_WORLD_UV_PROCFUNC   4
-#define LPUGL_WORLD_UV_DEFBACKEND 5
-#define LPUGL_WORLD_UV_BACKENDS   6
+#define LPUGL_WORLD_UV_LOGFUNC    5
+#define LPUGL_WORLD_UV_DEFBACKEND 6
+#define LPUGL_WORLD_UV_BACKENDS   7
 
 /* ============================================================================================ */
 
