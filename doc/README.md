@@ -690,7 +690,7 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count
+* <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count, isFirst
   `**</a>
 
   TODO

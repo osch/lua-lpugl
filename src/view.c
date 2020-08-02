@@ -291,6 +291,7 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
                 lua_pushinteger(L, x2 - x1);             ++nargs;
                 lua_pushinteger(L, y2 - y1);             ++nargs;
                 lua_pushinteger(L, event->expose.count); ++nargs;
+                lua_pushboolean(L, !udata->drawing);     ++nargs; // isFirst
                 udata->drawing = true;
                 lastExposure = (event->expose.count == 0);
                 break;
