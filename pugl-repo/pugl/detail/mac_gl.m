@@ -19,6 +19,8 @@
    @brief OpenGL graphics backend for MacOS.
 */
 
+#include <OpenGL/gl.h>
+
 #include "pugl/detail/implementation.h"
 #include "pugl/detail/mac.h"
 #include "pugl/detail/stub.h"
@@ -58,9 +60,11 @@
 		NSOpenGLPFASampleBuffers, samples ? 1 : 0,
 		NSOpenGLPFASamples,       samples,
 		0};
+	NSOpenGLPixelFormatAttribute* a = puglview->hints[PUGL_DOUBLE_BUFFER] 
+	                                  ? &pixelAttribs[0] : &pixelAttribs[1]; 
 
 	NSOpenGLPixelFormat* pixelFormat = [
-		[NSOpenGLPixelFormat alloc] initWithAttributes:pixelAttribs];
+		[NSOpenGLPixelFormat alloc] initWithAttributes:a];
 
 	if (pixelFormat) {
 		self = [super initWithFrame:frame pixelFormat:pixelFormat];
@@ -141,11 +145,14 @@ puglMacGlDestroy(PuglView* view)
 
 static PuglStatus
 puglMacGlEnter(PuglView* view, const PuglEventExpose* PUGL_UNUSED(expose),
-                                           PuglRects* PUGL_UNUSED(rects))
+                                           PuglRects* rects)
 {
 	PuglOpenGLView* const drawView = (PuglOpenGLView*)view->impl->drawView;
 
 	[[drawView openGLContext] makeCurrentContext];
+	if (rects && view->impl->trySurfaceCache) {
+        	rects->rectsCount = 0; // surface cache not supported by OpenGL backend
+	}
 	return PUGL_SUCCESS;
 }
 
@@ -156,9 +163,12 @@ puglMacGlLeave(PuglView* view, const PuglEventExpose* expose,
 	PuglOpenGLView* const drawView = (PuglOpenGLView*)view->impl->drawView;
 
 	if (expose) {
-		[[drawView openGLContext] flushBuffer];
+		if (view->hints[PUGL_DOUBLE_BUFFER]) {
+		    [[drawView openGLContext] flushBuffer];
+		} else {
+		    glFlush();
+		}
 	}
-
 	[NSOpenGLContext clearCurrentContext];
 
 	return PUGL_SUCCESS;
