@@ -435,7 +435,19 @@ static bool checkArgTableValueUdata(lua_State* L, int argTable, const char* key,
     }
     return false;
 }
-        
+
+// value must be on top of stack
+static bool checkArgTableValueUdataOrLightUdata(lua_State* L, int argTable, const char* key, const char* expectedKey, const char* expectedType)
+{
+    if (strcmp(key, expectedKey) == 0) {
+        if (lua_type(L, -1) == LUA_TLIGHTUSERDATA) {
+            return true;
+        } else {
+            return checkArgTableValueUdata(L, argTable, key, expectedKey, expectedType);
+        }
+    }
+    return false;
+}
 
 int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
 {
@@ -570,9 +582,9 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 }
                 hasEventFunc = true;
             }
-            else if (checkArgTableValueUdata(L, initArg, key, "transientFor", LPUGL_VIEW_CLASS_NAME)
-                  || checkArgTableValueUdata(L, initArg, key, "popupFor",     LPUGL_VIEW_CLASS_NAME)
-                  || checkArgTableValueUdata(L, initArg, key, "parent",       LPUGL_VIEW_CLASS_NAME))
+            else if (checkArgTableValueUdata            (L, initArg, key, "transientFor", LPUGL_VIEW_CLASS_NAME)
+                  || checkArgTableValueUdata            (L, initArg, key, "popupFor",     LPUGL_VIEW_CLASS_NAME)
+                  || checkArgTableValueUdataOrLightUdata(L, initArg, key, "parent",       LPUGL_VIEW_CLASS_NAME))
             {
                 bool isPopup     = (strcmp(key, "popupFor")     == 0);
                 bool isTransient = (strcmp(key, "transientFor") == 0);
@@ -595,34 +607,44 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 hasTransient = hasTransient || isTransient;
                 hasParent    = hasParent    || isChild;
 
-                ViewUserData* udata2 = lua_touserdata(L, -1);
-                if (!udata2->puglView) {
-                    return lpugl_ERROR_ILLEGAL_STATE(L, lua_pushfstring(L, "%s: view closed", key));
+                if (lua_type(L, -1) == LUA_TLIGHTUSERDATA) {
+                    PuglNativeView nativeWid = (uintptr_t)lua_touserdata(L, -1);
+                    if (nativeWid) {
+                        puglSetParentWindow(udata->puglView, nativeWid);
+                    } else {
+                        udata->isChild = false;
+                    }
                 }
-                if (isPopup || isTransient) {
-                    puglSetTransientFor(udata->puglView, puglGetNativeWindow(udata2->puglView));
-                }
-                if (isChild) {
-                    puglSetParentWindow(udata->puglView, puglGetNativeWindow(udata2->puglView));
-                }
-                lua_getuservalue(L, -1);                                        /* -> udata, key, value, uservalue */
-                if (lua_rawgeti(L, -1, LPUGL_VIEW_UV_CHILDVIEWS) != LUA_TTABLE) /* -> udata, key, value, uservalue, ? */
-                {                                                               /* -> udata, key, value, uservalue, nil */
-                    lua_pop(L, 1);                                              /* -> udata, key, value, uservalue */
-                    lua_newtable(L);                                            /* -> udata, key, value, uservalue, childviews */
-                    lua_newtable(L);                                            /* -> udata, key, value, uservalue, childviews, meta */
-                    lua_pushstring(L, "__mode");                                /* -> udata, key, value, uservalue, childviews, meta, key */
-                    lua_pushstring(L, "v");                                     /* -> udata, key, value, uservalue, childviews, meta, key, value */
-                    lua_rawset(L, -3);                                          /* -> udata, key, value, uservalue, childviews, meta */
-                    lua_setmetatable(L, -2);                                    /* -> udata, key, value, uservalue, childviews */
-                    lua_pushvalue(L, -1);                                       /* -> udata, key, value, uservalue, childviews, childviews */
-                    lua_rawseti(L, -3, LPUGL_VIEW_UV_CHILDVIEWS);               /* -> udata, key, value, uservalue, childviews */
-                }                                                               /* -> udata, key, value, uservalue, childviews */
-                lua_pushvalue(L, -5);                                           /* -> udata, key, value, uservalue, childviews, childview */
-                lua_rawsetp(L, -2, udata);                                      /* -> udata, key, value, uservalue, childviews */
-                lua_pop(L, 2);                                                  /* -> udata, key, value */
-                if (isPopup) {
-                    puglSetViewHint(udata->puglView, PUGL_IS_POPUP, lua_toboolean(L, -1));
+                else {
+                    ViewUserData* udata2 = lua_touserdata(L, -1);
+                    if (!udata2->puglView) {
+                        return lpugl_ERROR_ILLEGAL_STATE(L, lua_pushfstring(L, "%s: view closed", key));
+                    }
+                    if (isPopup || isTransient) {
+                        puglSetTransientFor(udata->puglView, puglGetNativeWindow(udata2->puglView));
+                    }
+                    if (isChild) {
+                        puglSetParentWindow(udata->puglView, puglGetNativeWindow(udata2->puglView));
+                    }
+                    lua_getuservalue(L, -1);                                        /* -> udata, key, value, uservalue */
+                    if (lua_rawgeti(L, -1, LPUGL_VIEW_UV_CHILDVIEWS) != LUA_TTABLE) /* -> udata, key, value, uservalue, ? */
+                    {                                                               /* -> udata, key, value, uservalue, nil */
+                        lua_pop(L, 1);                                              /* -> udata, key, value, uservalue */
+                        lua_newtable(L);                                            /* -> udata, key, value, uservalue, childviews */
+                        lua_newtable(L);                                            /* -> udata, key, value, uservalue, childviews, meta */
+                        lua_pushstring(L, "__mode");                                /* -> udata, key, value, uservalue, childviews, meta, key */
+                        lua_pushstring(L, "v");                                     /* -> udata, key, value, uservalue, childviews, meta, key, value */
+                        lua_rawset(L, -3);                                          /* -> udata, key, value, uservalue, childviews, meta */
+                        lua_setmetatable(L, -2);                                    /* -> udata, key, value, uservalue, childviews */
+                        lua_pushvalue(L, -1);                                       /* -> udata, key, value, uservalue, childviews, childviews */
+                        lua_rawseti(L, -3, LPUGL_VIEW_UV_CHILDVIEWS);               /* -> udata, key, value, uservalue, childviews */
+                    }                                                               /* -> udata, key, value, uservalue, childviews */
+                    lua_pushvalue(L, -5);                                           /* -> udata, key, value, uservalue, childviews, childview */
+                    lua_rawsetp(L, -2, udata);                                      /* -> udata, key, value, uservalue, childviews */
+                    lua_pop(L, 2);                                                  /* -> udata, key, value */
+                    if (isPopup) {
+                        puglSetViewHint(udata->puglView, PUGL_IS_POPUP, lua_toboolean(L, -1));
+                    }
                 }
             }
             else if (checkArgTableValueType(L, initArg, key, "backend", LUA_TUSERDATA))
@@ -657,14 +679,6 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
             lua_pop(L, 1);              /* -> udata, key */
         }                               /* -> udata */
     }
-    if (isResizable) {
-        if (hasPopup) {
-            return luaL_argerror(L, initArg, "Resizable attribute not allowed for popup views");
-        }
-        else if (hasParent) {
-            return luaL_argerror(L, initArg, "Resizable attribute not allowed for child views");
-        }
-    }
     if (!backend) {
         return luaL_argerror(L, initArg, "missing backend parameter and no default backend available");
     }
@@ -677,12 +691,6 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     backend->used += 1;
     
     if (title) {
-        if (udata->isPopup) {
-            return luaL_argerror(L, initArg, "Title attribute not allowed for popup views");
-        }
-        else if (udata->isChild) {
-            return luaL_argerror(L, initArg, "Title attribute not allowed for child views");
-        }
         puglSetWindowTitle(udata->puglView, title);
     }
     bool ok = puglRealize(udata->puglView) == PUGL_SUCCESS;
@@ -1114,6 +1122,18 @@ static int View_getScreenScale(lua_State* L)
 
 /* ============================================================================================ */
 
+static int View_getNativeHandle(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    lua_pushlightuserdata(L, (void*)puglGetNativeWindow(udata->puglView));
+    return 1;
+}
+
+/* ============================================================================================ */
+
 static const luaL_Reg ViewMethods[] = 
 {
     { "show",               View_show         },
@@ -1135,6 +1155,7 @@ static const luaL_Reg ViewMethods[] =
     { "getBackend",         View_getBackend      },
     { "postRedisplay",      View_postRedisplay   },
     { "requestClipboard",   View_requestClipboard},
+    { "getNativeHandle",    View_getNativeHandle },
     
     { NULL,           NULL } /* sentinel */
 };

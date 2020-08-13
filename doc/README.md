@@ -50,6 +50,7 @@
         * [view:postRedisplay()](#view_postRedisplay)
         * [view:setCursor()](#view_setCursor)
         * [view:requestClipboard()](#view_requestClipboard)
+        * [view:getNativeHandle()](#view_getNativeHandle)
         * [view:close()](#view_close)
         * [view:isClosed()](#view_isClosed)
    * [Backend Methods](#backend-methods)
@@ -257,21 +258,25 @@ TODO
     [*world:setDefaultBackend()*](#world_setDefaultBackend)
 
   * <a id="newView_title">**`title = titleString`**</a> - optional string, initial title for the 
-    created window. This parameter should not be set if [*parent*](#newView_parent) or 
-    [*popupFor*](#newView_popupFor) is given. The title may afterwards be changed using 
-    [*view:setTitle()*](#view_setTitle).
+    created window. This title is displayed in the window title bar if the view is a top level 
+    window (i.e. [*parent*](#newView_parent) and [*popupFor*](#newView_popupFor) are not given).
+    The title may afterwards be changed using [*view:setTitle()*](#view_setTitle).
 
   * <a id="newView_size">**`size = {width, height}`**</a> - optional table containing
     width and height as first and second table entry. Sets the initial size for the new view.
     The size may afterwards be changed using [*view:setSize()*](#view_setSize).
     
   * <a id="newView_resizable">**`resizable = flag`**</a> - *true* if the created window should be 
-    resizable. This parameter should not be set if [*parent*](#newView_parent) or 
-    [*popupFor*](#newView_popupFor) is given.
+    resizable by the user.
 
   * <a id="newView_parent">**`parent = view`**</a> - optional parent view. If given the created 
     view is embedded into the parent view. Otherwise a top level window is created. This parameter 
     cannot be combined with [*popupFor*](#newView_popupFor) or [*transientFor*](#newView_transientFor).
+    
+    The parent view may also be given as a [light userdata] 
+    which is then interpreted as a native view handle. This makes it possible to create a 
+    *lpugl.view* as a child view into a parent view that is not handled by *lpugl.world*. See
+    also [*view:getNativeHandle()*](#view_getNativeHandle)
 
   * <a id="newView_popupFor">**`popupFor = view`**</a>       - TODO - This parameter 
     cannot be combined with [*parent*](#newView_parent) or [*transientFor*](#newView_transientFor). 
@@ -513,10 +518,14 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setTitle">**`              view:setTitle(titleString)
+* <a id="view_setTitle">**`              view:setTitle(title)
   `**</a>
   
-  Sets the title of the window.
+  Sets the title of the window. 
+  
+  * *title* -  string value. The title is displayed in the window title bar if the view 
+               is a top level window (i.e. [*parent*](#newView_parent) and 
+               [*popupFor*](#newView_popupFor) are not set).
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -638,6 +647,18 @@ TODO
   
   TODO
 
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_getNativeHandle">**`      view:getNativeHandle()
+  `**</a>
+  
+  Gives the native handle for the view as a [light userdata]. 
+  
+  * For X11: This is a `Window`.
+  * For MacOS: This is a pointer to an `NSView`.
+  * For Windows: This is a `HWND`.
+
+  
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="view_close">**`                view:close()
@@ -867,3 +888,4 @@ End of document.
 [lpugl_cairo]:              https://luarocks.org/modules/osch/lpugl_cairo
 [lpugl_opengl]:             https://luarocks.org/modules/osch/lpugl_opengl
 [mtmsg]:                    https://github.com/osch/lua-mtmsg#mtmsg
+[light userdata]:           https://www.lua.org/manual/5.4/manual.html#2.1
