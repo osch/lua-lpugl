@@ -422,7 +422,6 @@ static void releaseWorldUdata(lua_State* L, int udataIdx, WorldUserData* udata)
             closeAll(L, udataIdx, world);
             if (world->puglWorld) {
                 puglSetProcessFunc(world->puglWorld, NULL, NULL);
-                puglUpdate(world->puglWorld, 0);
             }
             luaL_unref(L, LUA_REGISTRYINDEX, world->weakWorldRef);
             world->weakWorldRef = LUA_REFNIL;

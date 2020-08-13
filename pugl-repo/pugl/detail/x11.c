@@ -56,6 +56,7 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <errno.h>
 
 #define KEYSYM2UCS_INCLUDED
 #include "x11_keysym2ucs.c"
@@ -288,8 +289,16 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
 	    hasEvents = true;
 	    impl->needsProcessing = true;
 	}
-	return ret < 0 ? PUGL_UNKNOWN_ERROR
-	               : hasEvents ? PUGL_SUCCESS : PUGL_FAILURE;
+	if (ret < 0) {
+	    if (errno == EINTR) {
+	        return PUGL_FAILURE; // was interrupted
+	    } else {
+	        return PUGL_UNKNOWN_ERROR;
+	    }
+	}
+	else {
+	    return hasEvents ? PUGL_SUCCESS : PUGL_FAILURE;
+	}
 }
 
 static PuglView*
@@ -913,7 +922,6 @@ translateEvent(PuglView* view, XEvent xevent)
 			}
 		}
 		break;
-
 	default:
 		break;
 	}
@@ -1189,7 +1197,7 @@ puglDispatchX11Events(PuglWorld* world)
 
 		XEvent xevent;
 		XNextEvent(display, &xevent);
-
+	        
 		if (xevent.xany.window == impl->pseudoWin) {
 		    if (xevent.type == SelectionClear) {
 		        puglSetBlob(&world->clipboard, NULL, 0);

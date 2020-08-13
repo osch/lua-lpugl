@@ -1081,6 +1081,12 @@ puglFreeWorldInternals(PuglWorld* world)
 		world->impl->worldProxy = NULL;
 	}
 	free(world->impl);
+        
+        for (int i = 0; i < 3; ++i) {
+	    // run the event loop shortly to let closed windows disappear
+            int rslt = CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
+            if (rslt != kCFRunLoopRunHandledSource)  break;
+        }
 }
 
 PuglStatus

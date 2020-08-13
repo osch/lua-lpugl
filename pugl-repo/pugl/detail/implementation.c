@@ -354,7 +354,12 @@ puglGetVisible(const PuglView* view)
 PuglRect
 puglGetFrame(const PuglView* view)
 {
-	return view->frame;
+	if (view->lastConfigure.type == PUGL_CONFIGURE) {
+	    return view->frame;
+	} else {
+	    PuglRect frame = { 0, 0, view->reqWidth, view->reqHeight };
+	    return frame;
+	}
 }
 
 void*
