@@ -645,7 +645,6 @@ static int World_viewList(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
 
-    LpuglWorld* world = udata->world;
     if (udata->restricted) {
         return lpugl_ERROR_RESTRICTED_ACCESS(L);
     }

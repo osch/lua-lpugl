@@ -150,8 +150,6 @@ static int convertUnicodeCharToUtf8(uint32_t c, char* rsltBuffer)
 
 /* ============================================================================================ */
 
-static PuglStatus handleEvent2(PuglView* view, const PuglEvent* event, ViewUserData* udata, LpuglWorld* world);
-
 static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
 {
     ViewUserData* udata = puglGetHandle(view);
@@ -560,7 +558,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                     }                                         /* -> udata, key, value, uservalue, func */
                     lua_rawseti(L, -2, 0);                    /* -> udata, key, value, uservalue */
                     size_t nargs = lua_rawlen(L, -2) - 1;
-                    for (int i = 1; i <= nargs; ++i) {        /* -> udata, key, value, uservalue */
+                    for (size_t i = 1; i <= nargs; ++i) {     /* -> udata, key, value, uservalue */
                         lua_rawgeti(L, -2, 1 + i);            /* -> udata, key, value, uservalue, arg */
                         lua_rawseti(L, -2, i);                /* -> udata, key, value, uservalue */
                     }

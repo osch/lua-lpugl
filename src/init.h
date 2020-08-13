@@ -23,5 +23,14 @@
   #endif
 #endif
 
+#ifndef LPUGL_UNUSED
+  #if defined(__cplusplus)
+  #   define LPUGL_UNUSED(name)
+  #elif defined(__GNUC__)
+  #   define LPUGL_UNUSED(name) name##_unused __attribute__((__unused__))
+  #else
+  #   define LPUGL_UNUSED(name) name
+  #endif
+#endif
 
 #endif // LPUGL_INIT_H

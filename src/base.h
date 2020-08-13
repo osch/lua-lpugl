@@ -32,31 +32,32 @@
  * see also http://gcc.gnu.org/wiki/Visibility
  */
 
-#define BUILDING_DLL
+#ifndef LPUGL_BUILDING_DLL
+  #define LPUGL_BUILDING_DLL 1
+#endif
 
-#if defined _WIN32 || defined __CYGWIN__
-  #ifdef BUILDING_DLL
-    #ifdef __GNUC__
-      #define LPUGL_DLL_PUBLIC __attribute__ ((dllexport))
+#ifndef LPUGL_DLL_PUBLIC
+  #if defined _WIN32 || defined __CYGWIN__
+    #if LPUGL_BUILDING_DLL
+      #ifdef __GNUC__
+        #define LPUGL_DLL_PUBLIC __attribute__ ((dllexport))
+      #else
+        #define LPUGL_DLL_PUBLIC __declspec(dllexport) /* Note: actually gcc seems to also supports this syntax. */
+      #endif
     #else
-      #define LPUGL_DLL_PUBLIC __declspec(dllexport) /* Note: actually gcc seems to also supports this syntax. */
+      #define LPUGL_DLL_PUBLIC
     #endif
   #else
-    #ifdef __GNUC__
-      #define LPUGL_DLL_PUBLIC __attribute__ ((dllimport))
+    #if __GNUC__ >= 4
+      #pragma GCC visibility push (hidden) 
+      #if LPUGL_BUILDING_DLL
+        #define LPUGL_DLL_PUBLIC __attribute__ ((visibility ("default")))
+      #else
+        #define LPUGL_DLL_PUBLIC
+      #endif
     #else
-      #define LPUGL_DLL_PUBLIC __declspec(dllimport) /* Note: actually gcc seems to also supports this syntax. */
+      #define LPUGL_DLL_PUBLIC
     #endif
-  #endif
-  #define LPUGL_DLL_LOCAL
-#else
-  #if __GNUC__ >= 4
-    #pragma GCC visibility push (hidden) 
-    #define LPUGL_DLL_PUBLIC __attribute__ ((visibility ("default")))
-    #define LPUGL_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
-  #else
-    #define LPUGL_DLL_PUBLIC
-    #define LPUGL_DLL_LOCAL
   #endif
 #endif
 

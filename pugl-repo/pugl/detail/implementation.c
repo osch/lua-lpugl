@@ -486,6 +486,7 @@ puglDispatchEvent(PuglView* view, PuglEvent* event)
 		break;
 	case PUGL_CREATE:
 		view->created = true;
+		// fall through
 	case PUGL_DESTROY:
 		if (view->created) {
 			view->backend->enter(view, NULL, NULL);

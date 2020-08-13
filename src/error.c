@@ -1,7 +1,5 @@
 #include "error.h"
 
-static const char* const LPUGL_ERROR_CLASS_NAME = "lpugl.error";
-
 typedef struct Error {
     const char* name;
     int         details;

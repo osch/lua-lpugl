@@ -95,7 +95,7 @@ void lpugl_util_quote_lstring(lua_State* L, const char* s, size_t len)
         luaL_Buffer tmp;
         luaL_buffinit(L, &tmp);
         luaL_addchar(&tmp, '"');
-        int i;
+        size_t i;
         for (i = 0; i < len; ++i) {
             char c = s[i];
             if (c == 0) {

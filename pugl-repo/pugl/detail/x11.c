@@ -241,7 +241,7 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
                 if  (ret > 0 && FD_ISSET(afd, &fds)) {
 	            impl->needsProcessing = true;
 	            char buf[128];
-	            int ignore = read(afd, buf, sizeof(buf));
+	            int PUGL_UNUSED(ignore) = read(afd, buf, sizeof(buf));
                 }
             }
             return PUGL_SUCCESS;
@@ -282,7 +282,7 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
 	    hasEvents = true;
 	    impl->needsProcessing = true;
 	    char buf[128];
-	    int ignore = read(afd, buf, sizeof(buf));
+	    int PUGL_UNUSED(ignore) = read(afd, buf, sizeof(buf));
 	}
 	if (impl->nextProcessTime >= 0 && impl->nextProcessTime <= puglGetTime(world)) {
 	    hasEvents = true;
@@ -1096,7 +1096,7 @@ puglAwake(PuglWorld* world)
 {
 	if (world->impl->awake_fds[0] >= 0) {
 		char c = 0;
-		int ignore = write(world->impl->awake_fds[1], &c, 1);
+		int PUGL_UNUSED(ignore) = write(world->impl->awake_fds[1], &c, 1);
 	}
 }
 
@@ -1138,10 +1138,10 @@ flushExposures(PuglWorld* world)
                     }
                     if (view->hints[PUGL_DONT_MERGE_RECTS] && useRects2) {
                         int n = view->rects2.rectsCount;
-                        for (i = 0; i < n; ++i) {
-                            PuglRect* r = view->rects2.rectsList + i;
+                        for (int j = 0; j < n; ++j) {
+                            PuglRect* r = view->rects2.rectsList + j;
                             PuglEventExpose e = {
-                                PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, n - 1 - i
+                                PUGL_EXPOSE, 0, r->x, r->y, r->width, r->height, n - 1 - j
                             };
                             puglDispatchEventInContext(view, (PuglEvent*)&e);
                         }

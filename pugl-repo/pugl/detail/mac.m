@@ -1382,33 +1382,6 @@ puglSetNextProcessTime(PuglWorld* world, double seconds)
 	}
 }
 
-PuglStatus
-puglPollEvents(PuglWorld* world, const double timeout)
-{
-	world->impl->polling = true;
-	
-	NSDate* date = ((timeout < 0) ? [NSDate distantFuture] :
-	                (timeout == 0) ? nil :
-	                [NSDate dateWithTimeIntervalSinceNow:timeout]);
-
-	/* Note that dequeue:NO is broken (it blocks forever even when events are
-	   pending), so we work around this by dequeueing the event then posting it
-	   back to the front of the queue. */
-	NSEvent* event = [world->impl->app
-	                     nextEventMatchingMask:NSAnyEventMask
-	                     untilDate:date
-	                     inMode:NSDefaultRunLoopMode
-	                     dequeue:YES];
-
-	world->impl->polling = false;
-	if (event) {
-		[world->impl->app postEvent:event atStart:true];
-		return PUGL_SUCCESS;
-	} else {
-		return PUGL_FAILURE;
-	}
-}
-
 void
 puglAwake(PuglWorld* world)
 {

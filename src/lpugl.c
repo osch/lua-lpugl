@@ -75,7 +75,7 @@ static const luaL_Reg ModuleFunctions[] =
     { NULL,              NULL } /* sentinel */
 };
 
-static int handleClosingLuaState(lua_State* L)
+static int handleClosingLuaState(lua_State* LPUGL_UNUSED(L))
 {
     async_mutex_lock(lpugl_global_lock);
     stateCounter -= 1;
@@ -118,7 +118,7 @@ LPUGL_DLL_PUBLIC int luaopen_lpugl(lua_State* L)
             const char* ptr = LPUGL_MODULE_NAME;
             AtomicCounter c = 0;
             if (sizeof(AtomicCounter) - 1 >= 1) {
-                int i;
+                size_t i;
                 for (i = 0; i < 2 * sizeof(char*); ++i) {
                     c ^= ((int)(((char*)&ptr)[(i + 1) % sizeof(char*)]) & 0xff) << ((i % (sizeof(AtomicCounter) - 1))*8);
                 }

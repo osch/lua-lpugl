@@ -127,7 +127,7 @@ puglX11CairoEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rect
 
 
 static PuglStatus
-puglX11CairoLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
+puglX11CairoLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* PUGL_UNUSED(rects))
 {
 	PuglInternals* const       impl    = view->impl;
 	PuglX11CairoSurface* const surface = (PuglX11CairoSurface*)impl->surface;
