@@ -1316,6 +1316,8 @@ puglUpdate(PuglWorld* world, double timeout)
 	const double startTime = puglGetTime(world);
 	PuglStatus   st        = PUGL_SUCCESS;
 
+        XFlush(world->impl->display);
+
 	if (timeout < 0.0) {
 		st = puglPollX11Socket(world, timeout);
 		st = st ? st : puglDispatchX11Events(world);
