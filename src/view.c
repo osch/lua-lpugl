@@ -152,6 +152,9 @@ static int convertUnicodeCharToUtf8(uint32_t c, char* rsltBuffer)
 
 static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
 {
+    if (event->type == PUGL_DESTROY) {
+        return PUGL_SUCCESS; // lua view object is not functional at this point
+    }
     ViewUserData* udata = puglGetHandle(view);
     if (!udata || !udata->world) {
         fprintf(stderr, "lpugl: internal error in view.c:%d\n", __LINE__);
@@ -209,7 +212,7 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
         case PUGL_DATA_RECEIVED:      eventName = "DATA_RECEIVED"; break;
         
         case PUGL_NOTHING:
-        case PUGL_DESTROY: // TODO?
+        case PUGL_DESTROY:
         case PUGL_UPDATE:
         case PUGL_CLIENT:             eventName = NULL; break;
     }
