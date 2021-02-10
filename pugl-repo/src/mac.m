@@ -318,14 +318,23 @@ rescheduleProcessTimer(PuglWorld* world)
                          rect.size.height * scaleFactor,
                          0};
   if (!puglview->impl->trySurfaceCache) {
-    if (nsRectsCount == 1 && puglview->rects.rectsCount > 1) {
+    if (!nsRects || (nsRectsCount == 1 && puglview->rects.rectsCount > 1)) {
       // could be that getRectsBeingDrawn is not working (MacOS >= 10.14)
       // see also
       // https://forum.juce.com/t/juce-coregraphics-render-with-multiple-paint-calls-not-working-on-new-mac-mojave/30905
       //     or
       //     https://github.com/steinbergmedia/vstgui/commit/245ba880aa807a17aafac515efaeaa92c13f5093
       puglview->impl->trySurfaceCache = true;
-    } else {
+    } 
+    if (nsRectsCount == 1 && puglview->rects.rectsCount == 1) {
+      PuglRect* r = puglview->rects.rectsList;
+      if (   ev0.x < r->x || ev0.x + ev0.width  > r->x + r->width 
+          || ev0.y < r->y || ev0.y + ev0.height > r->y + r->height)
+      {
+        puglview->impl->trySurfaceCache = true;
+      }
+    }
+    if (!puglview->impl->trySurfaceCache) {
       if (puglRectsInit(&puglview->rects2, nsRectsCount)) {
         for (int i = 0; i < nsRectsCount; ++i) {
           PuglRect* r = puglview->rects2.rectsList + i;
@@ -1635,13 +1644,17 @@ PuglStatus
 puglPostRedisplayRect(PuglView* view, PuglRect rect)
 {
   integerRect(&rect);
-  if (addRect(&view->rects, &rect)) {
-    const NSRect rectPx = rectToNsRect(rect);
-    [view->impl->drawView setNeedsDisplayInRect:nsRectToPoints(view, rectPx)];
-    return PUGL_SUCCESS;
-  } else {
-    return puglPostRedisplay(view);
+  if (    rect.x + rect.width  > 0 && rect.x < view->frame.width
+       && rect.y + rect.height > 0 && rect.y < view->frame.height)
+  {
+    if (addRect(&view->rects, &rect)) {
+      const NSRect rectPx = rectToNsRect(rect);
+      [view->impl->drawView setNeedsDisplayInRect:nsRectToPoints(view, rectPx)];
+    } else {
+      return puglPostRedisplay(view);
+    }
   }
+  return PUGL_SUCCESS;
 }
 
 PuglNativeView

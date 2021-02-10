@@ -221,7 +221,7 @@ puglMacCairoEnter(PuglView*              view,
     PuglRect viewRect   = { 0, 0, sizePx.width, sizePx.height };
     PuglRect exposeRect = { expose->x, expose->y, expose->width, expose->height };
     
-#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+  #if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
     if (   !drawView->surface
         || !doesRectContain(&drawView->surfaceRect, &exposeRect)
         || !doesRectContain(&viewRect, &drawView->surfaceRect))
@@ -230,9 +230,9 @@ puglMacCairoEnter(PuglView*              view,
             cairo_surface_destroy(drawView->surface);
             drawView->surface = NULL;
         }
-#else
+  #else
         assert(!drawView->surface);
-#endif
+  #endif
         if (rects && view->impl->trySurfaceCache) {
             rects->rectsCount = 0;
         }
@@ -243,12 +243,15 @@ puglMacCairoEnter(PuglView*              view,
                 // CAIRO_FORMAT_RGB24 = each pixel is a 32-bit quantity, with the
                 // upper 8 bits unused. Red, Green, and Blue are stored in the remaining
                 // 24 bits in that order. The 32-bit quantities are stored native-endian.
-#if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
+  #if PUGL_MAC_CAIRO_OPTIMIZED_CACHE
     }
-#endif
+  #endif
     drawView->cr = cairo_create(drawView->surface);
     cairo_translate(drawView->cr, -drawView->surfaceRect.x, -drawView->surfaceRect.y);
 #else
+    if (rects && view->impl->trySurfaceCache) {
+        rects->rectsCount = 0;
+    }
     CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
      
     CGContextScaleCTM(context, sizePt.width/sizePx.width, sizePt.height/sizePx.height);
@@ -306,7 +309,7 @@ puglMacCairoLeave(PuglView*              view,
             CGColorSpaceRef  colorSpace = [[[view->impl->drawView window] colorSpace] CGColorSpace];
             CFStringRef      cname      = CGColorSpaceCopyName(colorSpace);
             CGImageAlphaInfo alphaInfo  = CGBitmapContextGetAlphaInfo(context);
-            
+
             if (cname) {
                 if (   CFStringCompare(cname, kCGColorSpaceSRGB, 0) == kCFCompareEqualTo
                     && CGBitmapContextGetBitsPerPixel(context) == 32
