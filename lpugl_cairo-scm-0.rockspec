@@ -47,7 +47,7 @@ build = {
       modules = {
         ["lpugl_cairo"] = {
           sources   = { "src/pugl_cairo.m" },
-          libraries = { "cairo", "pthread"  },
+          libraries = { "cairo" },
           variables = {
             LIBFLAG_EXTRAS = { 
               "-framework", "Cocoa" 

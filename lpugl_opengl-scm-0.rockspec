@@ -51,7 +51,6 @@ build = {
       modules = {
         ["lpugl_opengl"] = {
           sources   = { "src/pugl_opengl.m" },
-          libraries = { "pthread" },
           variables = {
             LIBFLAG_EXTRAS = { "-framework", "Cocoa",
                                "-framework", "OpenGL",

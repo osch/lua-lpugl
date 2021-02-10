@@ -42,7 +42,6 @@ build = {
       modules = {
         lpugl = {
           sources   = { "src/pugl.m" },
-          libraries = { "pthread" },
           variables = {
             LIBFLAG_EXTRAS = {  "-framework", "Cocoa" }
           }
