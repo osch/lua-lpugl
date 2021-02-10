@@ -16,7 +16,7 @@
     #include <cairo-quartz.h>
 #endif
 
-#include "pugl/pugl_cairo.h"
+#include "pugl/cairo.h"
 
 #include "lpugl_cairo.h"
 #include "world.h"

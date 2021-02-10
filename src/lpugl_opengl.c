@@ -1,6 +1,6 @@
 
 #include "init.h"
-#include "pugl/pugl_gl.h"
+#include "pugl/gl.h"
 
 #include "lpugl_opengl.h"
 #include "world.h"

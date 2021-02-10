@@ -3,7 +3,7 @@
 #include "base.h"
 
 #include "pugl/pugl.h"
-#include "pugl/pugl_cairo.h"
+#include "pugl/cairo.h"
 
 #include "util.h"
 #include "lpugl.h"
@@ -214,7 +214,9 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
         case PUGL_NOTHING:
         case PUGL_DESTROY:
         case PUGL_UPDATE:
-        case PUGL_CLIENT:             eventName = NULL; break;
+        case PUGL_CLIENT:
+        case PUGL_LOOP_ENTER:
+        case PUGL_LOOP_LEAVE:         eventName = NULL; break;
     }
     if (eventName) {
         lua_pushcfunction(L, lpugl_world_errormsghandler);
@@ -806,7 +808,7 @@ static int View_show(lua_State* L)
     if (!udata->puglView) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
-    if (puglShowWindow(udata->puglView) != PUGL_SUCCESS) {
+    if (puglShow(udata->puglView) != PUGL_SUCCESS) {
         return lpugl_ERROR_FAILED_OPERATION(L);
     }
     return 0;
@@ -820,7 +822,7 @@ static int View_hide(lua_State* L)
     if (!udata->puglView) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }
-    if (puglHideWindow(udata->puglView) != PUGL_SUCCESS) {
+    if (puglHide(udata->puglView) != PUGL_SUCCESS) {
         return lpugl_ERROR_FAILED_OPERATION(L);
     }
     return 0;

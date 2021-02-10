@@ -1,9 +1,9 @@
 #include "init.h"
 
-#include "pugl/detail/implementation.c"
+#include "pugl-repo/src/implementation.c"
 
 #if defined(LPUGL_USE_MAC)
-    #include "pugl/detail/mac.m"
+    #include "pugl-repo/src/mac.m"
 #else
     #error use pugl.c
 #endif 

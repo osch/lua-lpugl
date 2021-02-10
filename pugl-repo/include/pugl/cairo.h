@@ -14,13 +14,8 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-/**
-   @file pugl_cairo.h
-   @brief Declaration of Cairo backend accessor.
-*/
-
-#ifndef PUGL_PUGL_CAIRO_H
-#define PUGL_PUGL_CAIRO_H
+#ifndef PUGL_CAIRO_H
+#define PUGL_CAIRO_H
 
 #include "pugl/pugl.h"
 
@@ -29,16 +24,17 @@ PUGL_BEGIN_DECLS
 /**
    @defgroup cairo Cairo
    Cairo graphics support.
-   @ingroup pugl_c
+   @ingroup pugl
    @{
 */
 
 /**
    Cairo graphics backend accessor.
 
-   Pass the return value to puglInitBackend() to draw to a view with Cairo.
+   Pass the returned value to puglSetBackend() to draw to a view with Cairo.
 */
-PUGL_API const PuglBackend*
+PUGL_CONST_API
+const PuglBackend*
 puglCairoBackend(void);
 
 /**
@@ -48,14 +44,14 @@ puglCairoBackend(void);
    On OSX, this returns CGContextRef for current GraphicsPort.
    On Windows, this returns a handle to the calling process module.
 */
-PUGL_API void*
+PUGL_API
+void*
 puglCairoBackendGetNativeWorld(PuglWorld* world);
-
-
-PUGL_END_DECLS
 
 /**
    @}
 */
 
-#endif // PUGL_PUGL_CAIRO_H
+PUGL_END_DECLS
+
+#endif // PUGL_CAIRO_H

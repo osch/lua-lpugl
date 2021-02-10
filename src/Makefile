@@ -18,7 +18,7 @@ MAC_SO_EXT := so
 
 X11_COPTS :=
 WIN_COPTS := -I/mingw64/include/lua5.1 -I/mingw64/include/cairo
-MAC_COPTS := -I/usr/local/opt/lua/include/lua5.3 -I/usr/local/include/cairo
+MAC_COPTS := -I/usr/local/opt/lua/include/lua5.4 -I/usr/local/include/cairo
 
 X11_LOPTS        := -lpthread -lX11
 WIN_LOPTS        := -lkernel32 -lgdi32 -luser32 /mingw64/lib/liblua5.1.dll.a
@@ -56,7 +56,7 @@ lpugl:
 	@mkdir -p build
 	$(GCC_RUN) -g \
 	    $(COPTS) \
-	    -I../pugl-repo/ \
+	    -I../pugl-repo/include/ -I .. \
 	    -o build/lpugl.$(SO_EXT) lpugl.c -D LPUGL_VERSION=Makefile-1 \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    -DPUGL_DISABLE_DEPRECATED \
@@ -69,7 +69,7 @@ lpugl_cairo:
 	$(GCC_RUN) -g \
 	    $(COPTS) \
 	    -I /usr/include/cairo \
-	    -I../pugl-repo/ \
+	    -I../pugl-repo/include/ -I .. \
 	    -o build/lpugl_cairo.$(SO_EXT) lpugl_cairo.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    -DPUGL_DISABLE_DEPRECATED \
@@ -81,7 +81,7 @@ lpugl_opengl:
 	@mkdir -p build
 	$(GCC_RUN) -g \
 	    $(COPTS) \
-	    -I../pugl-repo/ \
+	    -I../pugl-repo/include/ -I .. \
 	    -o build/lpugl_opengl.$(SO_EXT) lpugl_opengl.c -D LPUGL_VERSION=Makefile-1  \
 	    -DLPUGL_BUILD_DATE="$(BUILD_DATE)" \
 	    -DPUGL_DISABLE_DEPRECATED \

@@ -14,63 +14,61 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-/**
-   @file stub.h
-   @brief Definition of generic stub backend functions.
-*/
-
 #ifndef PUGL_DETAIL_STUB_H
 #define PUGL_DETAIL_STUB_H
 
-#include "pugl/detail/types.h"
+#include "types.h"
+
 #include "pugl/pugl.h"
+
+#include <stddef.h>
 
 PUGL_BEGIN_DECLS
 
 static inline PuglStatus
 puglStubConfigure(PuglView* view)
 {
-	(void)view;
-	return PUGL_SUCCESS;
+  (void)view;
+  return PUGL_SUCCESS;
 }
 
 static inline PuglStatus
 puglStubCreate(PuglView* view)
 {
-	(void)view;
-	return PUGL_SUCCESS;
+  (void)view;
+  return PUGL_SUCCESS;
 }
 
 static inline PuglStatus
 puglStubDestroy(PuglView* view)
 {
-	(void)view;
-	return PUGL_SUCCESS;
+  (void)view;
+  return PUGL_SUCCESS;
 }
 
 static inline PuglStatus
 puglStubEnter(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
-	(void)view;
-	(void)expose;
-	(void)rects;
-	return PUGL_SUCCESS;
+  (void)view;
+  (void)expose;
+  (void)rects;
+  return PUGL_SUCCESS;
 }
 
 static inline PuglStatus
 puglStubLeave(PuglView* view, const PuglEventExpose* expose, PuglRects* rects)
 {
-	(void)view;
-	(void)expose;
-	(void)rects;
-	return PUGL_SUCCESS;
+  (void)view;
+  (void)expose;
+  (void)rects;
+  return PUGL_SUCCESS;
 }
 
 static inline void*
 puglStubGetContext(PuglView* view)
 {
-	(void)view;
-	return NULL;
+  (void)view;
+  return NULL;
 }
 
 PUGL_END_DECLS

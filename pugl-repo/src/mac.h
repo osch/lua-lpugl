@@ -15,11 +15,6 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-/**
-   @file mac.h
-   @brief Shared definitions for MacOS implementation.
-*/
-
 #ifndef PUGL_DETAIL_MAC_H
 #define PUGL_DETAIL_MAC_H
 
@@ -31,40 +26,40 @@
 
 @interface PuglWrapperView : NSView<NSTextInputClient>
 
-- (void) dispatchExpose:(NSRect)rect rects:(const NSRect*)rects count:(int)c;
-- (void) setReshaped;
-- (void) clipboardReceived;
+- (void)dispatchExpose:(NSRect)rect rects:(const NSRect*)rects count:(int)c;
+- (void)setReshaped;
+- (void)clipboardReceived;
 
 @end
 
 @interface PuglWindow : NSWindow
 
-- (void) setPuglview:(PuglView*)view;
+- (void)setPuglview:(PuglView*)view;
 
 @end
 
 struct PuglWorldInternalsImpl {
-	NSApplication*     app;
-	double             nextProcessTime;
-	id                 worldProxy;
-	NSTimer*           processTimer;
-	bool               polling;
+  NSApplication* app;
+  double         nextProcessTime;
+  id             worldProxy;
+  NSTimer*       processTimer;
+  bool           polling;
 };
 
 struct PuglInternalsImpl {
-	NSApplication*   app;
-	PuglWrapperView* wrapperView;
-	NSView*          drawView;
-	NSCursor*        cursor;
-	PuglWindow*      window;
-	uint32_t         mods;
-	uint32_t         mouseButtons;
-	bool             posRequested;
-	bool             displayed;
-	bool             mouseTracked;
-	bool             shouldCursorHidden;
-	bool             isCursorHidden;
-	bool             trySurfaceCache;
+  NSApplication*   app;
+  PuglWrapperView* wrapperView;
+  NSView*          drawView;
+  NSCursor*        cursor;
+  PuglWindow*      window;
+  uint32_t         mods;
+  uint32_t         mouseButtons;
+  bool             posRequested;
+  bool             displayed;
+  bool             mouseTracked;
+  bool             shouldCursorHidden;
+  bool             isCursorHidden;
+  bool             trySurfaceCache;
 };
 
 #endif // PUGL_DETAIL_MAC_H

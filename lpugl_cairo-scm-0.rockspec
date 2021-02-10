@@ -66,7 +66,7 @@ build = {
         "LPUGL_VERSION="..version:gsub("^(.*)-.-$", "%1"),
         "LPUGL_BUILD_DATE=$(BUILD_DATE)"
       },
-      incdirs = { "pugl-repo", "$(CAIRO_INCDIR)/cairo" },
+      incdirs = { "pugl-repo/include", ".", "$(CAIRO_INCDIR)/cairo" },
       libdirs = { "$(CAIRO_LIBDIR)" },
     },
   }

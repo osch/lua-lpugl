@@ -1,5 +1,5 @@
 /*
-  Copyright 2012-2020 David Robillard <d@drobilla.net>
+  Copyright 2019-2020 David Robillard <d@drobilla.net>
 
   Permission to use, copy, modify, and/or distribute this software for any
   purpose with or without fee is hereby granted, provided that the above
@@ -14,19 +14,34 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-/**
-   @file glu.h
-   @brief Portable header wrapper for glu.h.
+#ifndef PUGL_STUB_H
+#define PUGL_STUB_H
 
-   Unfortunately, GL includes vary across platforms so this header allows for
-   pure portable programs.
+#include "pugl/pugl.h"
+
+PUGL_BEGIN_DECLS
+
+/**
+   @defgroup stub Stub
+   Native graphics support.
+   @ingroup pugl
+   @{
 */
 
-#ifdef __APPLE__
-#    include "OpenGL/glu.h"
-#else
-#    ifdef _WIN32
-#        include <windows.h>  /* Broken Windows GL headers require this */
-#    endif
-#    include "GL/glu.h"
-#endif
+/**
+   Stub graphics backend accessor.
+
+   This backend just creates a simple native window without setting up any
+   portable graphics API.
+*/
+PUGL_CONST_API
+const PuglBackend*
+puglStubBackend(void);
+
+/**
+   @}
+*/
+
+PUGL_END_DECLS
+
+#endif // PUGL_STUB_H

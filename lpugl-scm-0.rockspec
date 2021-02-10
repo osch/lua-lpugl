@@ -64,7 +64,7 @@ build = {
         "LPUGL_VERSION="..version:gsub("^(.*)-.-$", "%1"),
         "LPUGL_BUILD_DATE=$(BUILD_DATE)"
       },
-      incdirs = { "pugl-repo" },
+      incdirs = { "pugl-repo/include", "." },
       libdirs = { },
     },
   }
