@@ -1574,7 +1574,9 @@ puglUpdate(PuglWorld* world, const double timeout)
   NSDate* date =
     ((timeout < 0) ? [NSDate distantFuture]
                    : [NSDate dateWithTimeIntervalSinceNow:timeout]);
-
+  bool wasPolling = world->impl->polling;
+  world->impl->polling = true;
+  bool hadEvent = false;
   for (NSEvent* ev = NULL;
        (ev = [world->impl->app nextEventMatchingMask:NSAnyEventMask
                                            untilDate:date
@@ -1586,12 +1588,14 @@ puglUpdate(PuglWorld* world, const double timeout)
 
     [world->impl->app sendEvent:ev];
 
-    if (timeout < 0) {
+    if (!hadEvent) {
       // Now that we've waited and got an event, set the date to now to
       // avoid looping forever
       date = [NSDate date];
     }
+    hadEvent = true;
   }
+  world->impl->polling = wasPolling;
 
   // the following does not work, at least not under Mac OS 10.15.5
   // 1.) Even after setting [view->impl->drawView setNeedsDisplay:YES]
@@ -1610,7 +1614,7 @@ puglUpdate(PuglWorld* world, const double timeout)
   //		[view->impl->drawView displayIfNeeded];
   //	}
 
-  return PUGL_SUCCESS;
+  return hadEvent ? PUGL_SUCCESS : PUGL_FAILURE;
 }
 
 #ifndef PUGL_DISABLE_DEPRECATED

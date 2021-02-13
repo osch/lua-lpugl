@@ -333,12 +333,15 @@ TODO
 
    * *timeout*  - optional float, timeout in seconds  
 
-   If a positive *timeout* is given, then events will be processed for that amount of time, 
-   starting from when this function was called. If *timeout* is zero, then this function will 
-   return as soon as all events in the current event loop queue have been processed. If 
-   *timeout* is negative or not given, this function will block indefinitely until an event 
-   occurs.
+   If *timeout* is given, this function will wait for *timeout* seconds until
+   events from the window system become available. If *timeout* is `nil` or not
+   given, this function will block indefinitely until an event occurs.
 
+   As soon as events are available, all events in the queue are processed and this function 
+   returns `true`.
+   
+   If *timeout* is given and there are no events available after *timeout*
+   seconds, this function will return `false`.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 

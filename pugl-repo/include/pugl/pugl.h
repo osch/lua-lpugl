@@ -814,15 +814,17 @@ puglGetTime(const PuglWorld* world);
    If `timeout` is zero, then this function will not block.  Plugins should
    always use a timeout of zero to avoid blocking the host.
 
-   If a positive `timeout` is given, then events will be processed for that
-   amount of time, starting from when this function was called.
+   If a positive `timeout` is given, this function will wait for `timeout` seconds 
+   until events from the window system become available. 
 
    If a negative `timeout` is given, this function will block indefinitely
    until an event occurs.
 
-   For continuously animating programs, a timeout that is a reasonable fraction
-   of the ideal frame period should be used, to minimize input latency by
-   ensuring that as many input events are consumed as possible before drawing.
+   As soon as events are available, all events in the queue are processed and this 
+   function returns #PUGL_SUCCESS.
+   
+   If `timeout` is not negative and there are no events available after `timeout`
+   seconds, this function will return #PUGL_FAILURE.
 
    @return #PUGL_SUCCESS if events are read, #PUGL_FAILURE if no events are
    read, or an error.

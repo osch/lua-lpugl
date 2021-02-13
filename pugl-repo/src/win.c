@@ -283,26 +283,36 @@ puglInitViewInternals(void)
 }
 
 static PuglStatus
-puglPollWinEvents(PuglWorld* world, const double timeout)
+puglPollWinEvents(PuglWorld* world, const double timeout, bool isFirstCall)
 {
   if (!world->impl->initialized && !puglInitWorldInternals2(world)) {
-    return PUGL_FAILURE;
+    return PUGL_BAD_CONFIGURATION;
   }
-  DWORD hasMsg = GetQueueStatus(QS_ALLEVENTS);
-  if (hasMsg) {
-    return PUGL_SUCCESS;
+  if (isFirstCall) {
+    DWORD hasMsg = GetQueueStatus(QS_ALLEVENTS);
+    // The high-order word of the return value indicates the types of messages
+    // currently in the queue. The low-order word indicates the types of
+    // messages that have been added to the queue and that are still in the
+    // queue since the last call to the GetQueueStatus, GetMessage, or
+    // PeekMessage function.
+    if (hasMsg) {
+      return PUGL_SUCCESS; // hasEvents
+    }
   }
 
   if (timeout < 0) {
     WaitMessage();
   } else {
-    DWORD rc = MsgWaitForMultipleObjects(
-      0, NULL, FALSE, (DWORD)(timeout * 1e3), QS_ALLEVENTS);
+    DWORD rc = MsgWaitForMultipleObjects(0, NULL, FALSE, (DWORD)(timeout * 1e3), QS_ALLEVENTS);
+    // Functions such as PeekMessage, GetMessage, and WaitMessage mark messages
+    // in the queue as old messages. Therefore, after you call one of these
+    // functions, a subsequent call to MsgWaitForMultipleObjects will not return
+    // until new input of the specified type arrives.
     if (rc != WAIT_OBJECT_0) {
-      return PUGL_FAILURE;
+      return PUGL_FAILURE; // timeout
     }
   }
-  return PUGL_SUCCESS;
+  return PUGL_SUCCESS;  // hasEvents
 }
 
 void
@@ -1178,7 +1188,7 @@ puglWaitForEvent(PuglView* PUGL_UNUSED(view))
 #endif
 
 static PuglStatus
-puglDispatchViewEvents(HWND hwnd)
+puglDispatchWinEvents(PuglWorld* PUGL_UNUSED(world))
 {
   /* Windows has no facility to process only currently queued messages, which
      causes the event loop to run forever in cases like mouse movement where
@@ -1187,37 +1197,25 @@ puglDispatchViewEvents(HWND hwnd)
      when it is received, then break the loop on the first message that was
      created afterwards. */
 
+  PostMessage(NULL, PUGL_LOCAL_MARK_MSG, 0, 0);
+  
+  bool hadEvents = false;
   long markTime = 0;
   MSG  msg;
-  while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
+  while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
     if (msg.message == PUGL_LOCAL_MARK_MSG) {
       markTime = GetMessageTime();
     } else {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
+      hadEvents = true;
       if (markTime != 0 && GetMessageTime() > markTime) {
         break;
       }
     }
   }
 
-  return PUGL_SUCCESS;
-}
-
-static PuglStatus
-puglDispatchWinEvents(PuglWorld* world)
-{
-  PostMessage(world->impl->pseudoWin, PUGL_LOCAL_MARK_MSG, 0, 0);
-  for (size_t i = 0; i < world->numViews; ++i) {
-    PostMessage(world->views[i]->impl->hwnd, PUGL_LOCAL_MARK_MSG, 0, 0);
-  }
-
-  puglDispatchViewEvents(world->impl->pseudoWin);
-  for (size_t i = 0; i < world->numViews; ++i) {
-    puglDispatchViewEvents(world->views[i]->impl->hwnd);
-  }
-
-  return PUGL_SUCCESS;
+  return hadEvents ? PUGL_SUCCESS : PUGL_FAILURE;
 }
 
 PuglStatus
@@ -1227,27 +1225,41 @@ puglUpdate(PuglWorld* world, double timeout)
   PuglStatus   st        = PUGL_SUCCESS;
 
   if (timeout < 0.0) {
-    st = puglPollWinEvents(world, timeout);
-    st = st ? st : puglDispatchWinEvents(world);
+    bool isFirst = true;
+  again:
+    st = puglPollWinEvents(world, timeout, isFirst);
+    if (st == PUGL_SUCCESS) {
+      st = puglDispatchWinEvents(world);
+      if (st == PUGL_FAILURE) { // noEvents
+        isFirst = false; 
+        goto again; 
+      }
+    }
   } else if (timeout == 0.0) {
     st = puglDispatchWinEvents(world);
   } else {
     const double endTime = startTime + timeout - 0.001;
+    bool isFirst = true;
     for (double t = startTime; t < endTime; t = puglGetTime(world)) {
-      if ((st = puglPollWinEvents(world, endTime - t)) ||
-          (st = puglDispatchWinEvents(world))) {
+      if (st = puglPollWinEvents(world, endTime - t, isFirst)) {
         break;
       }
+      st = puglDispatchWinEvents(world);
+      if (st == PUGL_SUCCESS || st != PUGL_FAILURE) {
+        // PUGL_SUCCESS=hadEvents, PUGL_FAILURE=noEvents
+        break;
+      }
+      isFirst = false;
     }
   }
-
-  for (size_t i = 0; i < world->numViews; ++i) {
+  // Disabled because we always are returning if events have been processed
+  /*for (size_t i = 0; i < world->numViews; ++i) {
     if (world->views[i]->visible) {
       puglDispatchSimpleEvent(world->views[i], PUGL_UPDATE);
     }
 
     UpdateWindow(world->views[i]->impl->hwnd);
-  }
+  }*/
 
   return st;
 }

@@ -249,27 +249,32 @@ puglInitViewInternals(void)
   return impl;
 }
 
+static void
+drainAwakePipe(PuglWorld* world)
+{
+  PuglWorldInternals* impl = world->impl;
+  const int           afd  = impl->awake_fds[0];
+  if (afd >= 0) {
+    fd_set fds;
+    int    nfds = afd + 1;
+    FD_ZERO(&fds);
+    FD_SET(afd, &fds);
+    struct timeval tv  = {0, 0};
+    int            ret = select(nfds, &fds, NULL, NULL, &tv);
+    if (ret > 0 && FD_ISSET(afd, &fds)) {
+      impl->needsProcessing = true;
+      char buf[128];
+      int  PUGL_UNUSED(ignore) = read(afd, buf, sizeof(buf));
+    }
+  }
+}
+
 static PuglStatus
 puglPollX11Socket(PuglWorld* world, const double timeout0)
 {
   PuglWorldInternals* impl = world->impl;
   if (XEventsQueued(world->impl->display, QueuedAlready) > 0) {
-    // evaluate only awake queue
-    const int afd = impl->awake_fds[0];
-    if (afd >= 0) {
-      fd_set fds;
-      int    nfds = afd + 1;
-      FD_ZERO(&fds);
-      FD_SET(afd, &fds);
-      struct timeval tv  = {0, 0};
-      int            ret = select(nfds, &fds, NULL, NULL, &tv);
-      if (ret > 0 && FD_ISSET(afd, &fds)) {
-        impl->needsProcessing = true;
-        char buf[128];
-        int  PUGL_UNUSED(ignore)
-        = read(afd, buf, sizeof(buf));
-      }
-    }
+    drainAwakePipe(world);
     return PUGL_SUCCESS;
   }
 
@@ -308,8 +313,7 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
     hasEvents             = true;
     impl->needsProcessing = true;
     char buf[128];
-    int  PUGL_UNUSED(ignore)
-    = read(afd, buf, sizeof(buf));
+    int  PUGL_UNUSED(ignore) = read(afd, buf, sizeof(buf));
   }
   if (impl->nextProcessTime >= 0 &&
       impl->nextProcessTime <= puglGetTime(world)) {
@@ -318,12 +322,13 @@ puglPollX11Socket(PuglWorld* world, const double timeout0)
   }
   if (ret < 0) {
     if (errno == EINTR) {
-      return PUGL_FAILURE; // was interrupted
+      return PUGL_FAILURE; // interrupted
     } else {
       return PUGL_UNKNOWN_ERROR;
     }
   } else {
-    return hasEvents ? PUGL_SUCCESS : PUGL_FAILURE;
+    return hasEvents ? PUGL_SUCCESS  // hadEvents
+                     : PUGL_FAILURE; // timeout
   }
 }
 
@@ -1256,8 +1261,7 @@ puglAwake(PuglWorld* world)
 {
   if (world->impl->awake_fds[0] >= 0) {
     char c = 0;
-    int  PUGL_UNUSED(ignore)
-    = write(world->impl->awake_fds[1], &c, 1);
+    int  PUGL_UNUSED(ignore) = write(world->impl->awake_fds[1], &c, 1);
   }
 }
 
@@ -1321,6 +1325,7 @@ flushExposures(PuglWorld* world)
 static PuglStatus
 puglDispatchX11Events(PuglWorld* world)
 {
+  bool hadEvents = false;
   bool wasDispatchingEvents      = world->impl->dispatchingEvents;
   world->impl->dispatchingEvents = true;
 
@@ -1329,9 +1334,7 @@ puglDispatchX11Events(PuglWorld* world)
 
   if (impl->syncState == 2) {
     if (XLastKnownRequestProcessed(display) < impl->syncSerial) {
-      XSync(
-        display,
-        False); // wait, we are too fast: previous serial0 still not processed
+      XSync(display, False); // wait, we are too fast: previous serial0 still not processed
     }
     impl->syncState = 0;
   }
@@ -1340,8 +1343,10 @@ puglDispatchX11Events(PuglWorld* world)
                                 impl->nextProcessTime <= puglGetTime(world))) {
     impl->needsProcessing = false;
     impl->nextProcessTime = -1;
-    if (world->processFunc)
+    hadEvents = true;
+    if (world->processFunc) {
       world->processFunc(world, world->processUserData);
+    }
   }
   const PuglX11Atoms* const atoms = &world->impl->atoms;
 
@@ -1349,6 +1354,7 @@ puglDispatchX11Events(PuglWorld* world)
 
   // Process all queued events
   while (XEventsQueued(display, QueuedAfterReading) > 0) {
+    hadEvents = true;
     XEvent xevent;
     XNextEvent(display, &xevent);
 
@@ -1449,7 +1455,8 @@ puglDispatchX11Events(PuglWorld* world)
       impl->syncState = 2; // next invocation will XSync for previous serial0
     }
   }
-  return PUGL_SUCCESS;
+  // PUGL_SUCCESS=hadEvents, PUGL_FAILURE=noEvents, PUGL_UNKNOWN_ERROR=error
+  return hadEvents ? PUGL_SUCCESS : PUGL_FAILURE;
 }
 
 #ifndef PUGL_DISABLE_DEPRECATED
@@ -1465,25 +1472,35 @@ puglUpdate(PuglWorld* world, double timeout)
 {
   const double startTime = puglGetTime(world);
   PuglStatus   st        = PUGL_SUCCESS;
-
   XFlush(world->impl->display);
 
   if (timeout < 0.0) {
+  again:
     st = puglPollX11Socket(world, timeout);
-    st = st ? st : puglDispatchX11Events(world);
+    if (st == PUGL_SUCCESS) {
+      st = puglDispatchX11Events(world);
+      if (st == PUGL_FAILURE) {
+        goto again; // noEvents
+      }
+    }
   } else if (timeout <= 0.001) {
+    drainAwakePipe(world);
     st = puglDispatchX11Events(world);
   } else {
     const double endTime = startTime + timeout - 0.001;
     for (double t = startTime; t < endTime; t = puglGetTime(world)) {
-      if ((st = puglPollX11Socket(world, endTime - t)) ||
-          (st = puglDispatchX11Events(world))) {
+      if (st = puglPollX11Socket(world, endTime - t)) {
+        break;
+      }
+      st = puglDispatchX11Events(world);
+      if (st == PUGL_SUCCESS || st != PUGL_FAILURE) {
+        // PUGL_SUCCESS=hadEvents, PUGL_FAILURE=noEvents
         break;
       }
     }
   }
 
-  return st;
+  return st; 
 }
 
 double

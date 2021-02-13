@@ -156,11 +156,14 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
 
     if (   lua_rawgeti(L, LUA_REGISTRYINDEX, world->weakWorldRef) != LUA_TTABLE /* -> weakWorld */
         || lua_rawgeti(L, -1, 0) != LUA_TUSERDATA                               /* -> weakWorld, worldUdata */
-        || lua_getuservalue(L, -1) != LUA_TTABLE                                /* -> weakWorld, worldUdata, worldUservalue */
-        || lua_rawgeti(L, -1, LPUGL_WORLD_UV_PROCFUNC) != LUA_TFUNCTION)        /* -> weakWorld, worldUdata, worldUservalue, procFunc */
+        || lua_getuservalue(L, -1) != LUA_TTABLE)                               /* -> weakWorld, worldUdata, worldUservalue */
     {
         fprintf(stderr, "lpugl: internal error in world.c:%d\n", __LINE__);
         abort();
+    }
+    if (lua_rawgeti(L, -1, LPUGL_WORLD_UV_PROCFUNC) != LUA_TFUNCTION) {     /* -> weakWorld, worldUdata, worldUservalue, procFunc */
+        lua_settop(L, oldTop);
+        return PUGL_SUCCESS;
     }
     int rc = lua_pcall(L, 0, 0, msgh);                                      /* -> weakWorld, worldUdata, worldUservalue, ? */
 
@@ -414,7 +417,7 @@ void lpugl_world_close_pugl(LpuglWorld* world)
 }
 
 
-static void releaseWorldUdata(lua_State* L, int udataIdx, WorldUserData* udata)
+static void releaseUdataWorld(lua_State* L, int udataIdx, WorldUserData* udata)
 {
     LpuglWorld* world = udata->world;
     if (world) {
@@ -446,7 +449,7 @@ static void releaseWorldUdata(lua_State* L, int udataIdx, WorldUserData* udata)
 static int World_release(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
-    releaseWorldUdata(L, 1, udata);
+    releaseUdataWorld(L, 1, udata);
     return 0;
 }
 
@@ -460,7 +463,7 @@ static int World_close(lua_State* L)
         return lpugl_ERROR_RESTRICTED_ACCESS(L);
     }
     if (udata->world) {
-        releaseWorldUdata(L, 1, udata);
+        releaseUdataWorld(L, 1, udata);
     }
     return 0;
 }
@@ -601,18 +604,23 @@ static int World_update(lua_State* L)
     if (!world) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }    
-    double timeout = lua_isnone(L, 2) ? -1 : luaL_checknumber(L, 2);
- 
+    double timeout;
+    if (lua_isnoneornil(L, 2)) {
+        timeout = -1;
+    } else {
+        timeout = luaL_checknumber(L, 2);
+        if (timeout < 0) {
+            timeout = 0;
+        }
+    }
     bool wasInCallback = world->inCallback;
     world->inCallback = true;
-    
-    PuglStatus status = puglUpdate(world->puglWorld, timeout);
 
+    PuglStatus status = puglUpdate(world->puglWorld, timeout);
     world->inCallback = wasInCallback;
-    if (!wasInCallback && world->mustClosePugl) {
-        lpugl_world_close_pugl(world);
-    }
+    
     if (status == PUGL_SUCCESS || status == PUGL_FAILURE) {
+        // PUGL_SUCCESS=hadEvents, PUGL_FAILURE=noEvents
         lua_pushboolean(L, status == PUGL_SUCCESS);
         return 1;
     } else {
