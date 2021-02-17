@@ -61,31 +61,21 @@ puglX11GlConfigure(PuglView* view)
     (PuglX11GlSurface*)calloc(1, sizeof(PuglX11GlSurface));
   impl->surface = surface;
 
-  const int attrs[] = {GLX_X_RENDERABLE,
-                       True,
-                       GLX_X_VISUAL_TYPE,
-                       GLX_TRUE_COLOR,
-                       GLX_DRAWABLE_TYPE,
-                       GLX_WINDOW_BIT,
-                       GLX_RENDER_TYPE,
-                       GLX_RGBA_BIT,
-                       GLX_SAMPLES,
-                       puglX11GlHintValue(view->hints[PUGL_SAMPLES]),
-                       GLX_RED_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_RED_BITS]),
-                       GLX_GREEN_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_GREEN_BITS]),
-                       GLX_BLUE_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_BLUE_BITS]),
-                       GLX_ALPHA_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_ALPHA_BITS]),
-                       GLX_DEPTH_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_DEPTH_BITS]),
-                       GLX_STENCIL_SIZE,
-                       puglX11GlHintValue(view->hints[PUGL_STENCIL_BITS]),
-                       GLX_DOUBLEBUFFER,
-                       puglX11GlHintValue(view->hints[PUGL_DOUBLE_BUFFER]),
+  // clang-format off
+  const int attrs[] = {GLX_X_RENDERABLE,  True,
+                       GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+                       GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+                       GLX_RENDER_TYPE,   GLX_RGBA_BIT,
+                       GLX_SAMPLES,       puglX11GlHintValue(view->hints[PUGL_SAMPLES]),
+                       GLX_RED_SIZE,      puglX11GlHintValue(view->hints[PUGL_RED_BITS]),
+                       GLX_GREEN_SIZE,    puglX11GlHintValue(view->hints[PUGL_GREEN_BITS]),
+                       GLX_BLUE_SIZE,     puglX11GlHintValue(view->hints[PUGL_BLUE_BITS]),
+                       GLX_ALPHA_SIZE,    puglX11GlHintValue(view->hints[PUGL_ALPHA_BITS]),
+                       GLX_DEPTH_SIZE,    puglX11GlHintValue(view->hints[PUGL_DEPTH_BITS]),
+                       GLX_STENCIL_SIZE,  puglX11GlHintValue(view->hints[PUGL_STENCIL_BITS]),
+                       GLX_DOUBLEBUFFER,  puglX11GlHintValue(view->hints[PUGL_DOUBLE_BUFFER]),
                        None};
+  // clang-format on
 
   int          n_fbc = 0;
   GLXFBConfig* fbc   = glXChooseFBConfig(display, screen, attrs, &n_fbc);
@@ -96,34 +86,30 @@ puglX11GlConfigure(PuglView* view)
   surface->fb_config = fbc[0];
   impl->vi           = glXGetVisualFromFBConfig(impl->display, fbc[0]);
 
-  view->hints[PUGL_RED_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_RED_SIZE);
-  view->hints[PUGL_GREEN_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_GREEN_SIZE);
-  view->hints[PUGL_BLUE_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_BLUE_SIZE);
-  view->hints[PUGL_ALPHA_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_ALPHA_SIZE);
-  view->hints[PUGL_DEPTH_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_DEPTH_SIZE);
-  view->hints[PUGL_STENCIL_BITS] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_STENCIL_SIZE);
-  view->hints[PUGL_SAMPLES] = puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES);
-  view->hints[PUGL_DOUBLE_BUFFER] =
-    puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER);
+  // clang-format off
+  view->hints[PUGL_RED_BITS]      = puglX11GlGetAttrib(display, fbc[0], GLX_RED_SIZE);
+  view->hints[PUGL_GREEN_BITS]    = puglX11GlGetAttrib(display, fbc[0], GLX_GREEN_SIZE);
+  view->hints[PUGL_BLUE_BITS]     = puglX11GlGetAttrib(display, fbc[0], GLX_BLUE_SIZE);
+  view->hints[PUGL_ALPHA_BITS]    = puglX11GlGetAttrib(display, fbc[0], GLX_ALPHA_SIZE);
+  view->hints[PUGL_DEPTH_BITS]    = puglX11GlGetAttrib(display, fbc[0], GLX_DEPTH_SIZE);
+  view->hints[PUGL_STENCIL_BITS]  = puglX11GlGetAttrib(display, fbc[0], GLX_STENCIL_SIZE);
+  view->hints[PUGL_SAMPLES]       = puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES);
+  view->hints[PUGL_DOUBLE_BUFFER] = puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER);
+  // clang-format on
 
   char msg[256];
 
   snprintf(
     msg,
     sizeof(msg),
-    "Using visual 0x%lX: R=%d G=%d B=%d A=%d D=%d DOUBLE=%d SAMPLES=%d\n",
+    "Using visual 0x%lX: R=%d G=%d B=%d A=%d D=%d ST=%d DOUBLE=%d SAMPLES=%d\n",
     impl->vi->visualid,
     puglX11GlGetAttrib(display, fbc[0], GLX_RED_SIZE),
     puglX11GlGetAttrib(display, fbc[0], GLX_GREEN_SIZE),
     puglX11GlGetAttrib(display, fbc[0], GLX_BLUE_SIZE),
     puglX11GlGetAttrib(display, fbc[0], GLX_ALPHA_SIZE),
     puglX11GlGetAttrib(display, fbc[0], GLX_DEPTH_SIZE),
+    puglX11GlGetAttrib(display, fbc[0], GLX_STENCIL_SIZE),
     puglX11GlGetAttrib(display, fbc[0], GLX_DOUBLEBUFFER),
     puglX11GlGetAttrib(display, fbc[0], GLX_SAMPLES));
 
@@ -166,18 +152,18 @@ puglX11GlCreate(PuglView* view)
   Display* const          display   = impl->display;
   GLXFBConfig             fb_config = surface->fb_config;
 
+  // clang-format off
   const int ctx_attrs[] = {
-    GLX_CONTEXT_MAJOR_VERSION_ARB,
-    view->hints[PUGL_CONTEXT_VERSION_MAJOR],
-    GLX_CONTEXT_MINOR_VERSION_ARB,
-    view->hints[PUGL_CONTEXT_VERSION_MINOR],
-    GLX_CONTEXT_FLAGS_ARB,
-    (view->hints[PUGL_USE_DEBUG_CONTEXT] ? GLX_CONTEXT_DEBUG_BIT_ARB : 0),
-    GLX_CONTEXT_PROFILE_MASK_ARB,
-    (view->hints[PUGL_USE_COMPAT_PROFILE]
-       ? GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
-       : GLX_CONTEXT_CORE_PROFILE_BIT_ARB),
+    GLX_CONTEXT_MAJOR_VERSION_ARB, view->hints[PUGL_CONTEXT_VERSION_MAJOR],
+    GLX_CONTEXT_MINOR_VERSION_ARB, view->hints[PUGL_CONTEXT_VERSION_MINOR],
+    GLX_CONTEXT_FLAGS_ARB,        (view->hints[PUGL_USE_DEBUG_CONTEXT] 
+                                       ? GLX_CONTEXT_DEBUG_BIT_ARB 
+                                       : 0),
+    GLX_CONTEXT_PROFILE_MASK_ARB, (view->hints[PUGL_USE_COMPAT_PROFILE]
+                                       ? GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+                                       : GLX_CONTEXT_CORE_PROFILE_BIT_ARB),
     0};
+  // clang-format on
 
   PFNGLXCREATECONTEXTATTRIBSARBPROC create_context =
     (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress(
