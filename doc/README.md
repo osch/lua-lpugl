@@ -37,6 +37,7 @@
    * [View Methods](#view-methods)
         * [view:show()](#view_show)
         * [view:hide()](#view_hide)
+        * [view:isVisible()](#view_isVisible)
         * [view:setTitle()](#view_setTitle)
         * [view:setMinSize()](#view_setMinSize)
         * [view:setMaxSize()](#view_setMaxSize)
@@ -44,6 +45,8 @@
         * [view:getSize()](#view_getSize)
         * [view:setFrame()](#view_setFrame)
         * [view:getFrame()](#view_getFrame)
+        * [view:hasFocus()](#view_hasFocus)
+        * [view:grabFocus()](#view_grabFocus)
         * [view:getLayoutContext()](#view_getLayoutContext)
         * [view:getDrawContext()](#view_getDrawContext)
         * [view:getScreenScale()](#view_getScreenScale)
@@ -329,20 +332,20 @@ TODO
 * <a id="world_update">**`               world:update(timeout)
   `**</a>
 
-   Update by processing events from the window system.
+  Update by processing events from the window system.
 
-   * *timeout*  - optional float, timeout in seconds  
+  * *timeout*  - optional float, timeout in seconds  
 
-   If *timeout* is given, this function will wait for *timeout* seconds until
-   events from the window system become available. If *timeout* is `nil` or not
-   given, this function will block indefinitely until an event occurs.
+  If *timeout* is given, this function will wait for *timeout* seconds until
+  events from the window system become available. If *timeout* is `nil` or not
+  given, this function will block indefinitely until an event occurs.
 
-   As soon as events are available, all events in the queue are processed and this function 
-   returns `true`.
-   
-   If *timeout* is given and there are no events available after *timeout*
-   seconds, this function will return `false`.
-
+  As soon as events are available, all events in the queue are processed and this function 
+  returns `true`.
+  
+  If *timeout* is given and there are no events available after *timeout*
+  seconds, this function will return `false`.
+  
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="world_setProcessFunc">**`          world:setProcessFunc(func)
@@ -355,7 +358,7 @@ TODO
   * *func*   -  a function that takes no parameters. This function is meant to do periodic 
                 or timer triggered processing in the main event loop.
   
-  On X11 platform the usage of a process function is equivalent to handle processing in the main
+  On X11 platform the usage of a process function is equivalent to handling processing in the main
   event loop directly, e.g.
   
   ```lua
@@ -365,7 +368,7 @@ TODO
   end
   
   ```
-  
+
   However Windows and Mac OS platforms have the concept of a *central event queue*
   (on Windows per thread, on Mac per application). On these platforms event
   dispatching can occur outside your own event loop (for example on Windows: event 
@@ -373,7 +376,7 @@ TODO
   Also on Mac platforms calling *world:update()* will dispatch events belonging
   to other windows that do not  belong to your Pugl world. This might be interesting if
   LPugl is used within a larger context (e.g. for a plugin GUI inside another application).
-  
+
   For best cross platform compatibility therefore it is highly reommended to
   register a process function via *world:setProcessFunc()* and use
   [*world:setNextProcessTime()*](#world_setNextProcessTime)  or
@@ -521,6 +524,13 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="view_isVisible">**`            view:isVisible()
+  `**</a>
+  
+  Returns `true` if the view is visible.
+  
+<!-- ---------------------------------------------------------------------------------------- -->
+
 * <a id="view_setTitle">**`              view:setTitle(title)
   `**</a>
   
@@ -584,6 +594,19 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
+* <a id="view_hasFocus">**`             view:hasFocus()
+  `**</a>
+  
+  Returns `true` if the view has keyboard input focus. 
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="view_grabFocus">**`            view:grabFocus()
+  `**</a>
+  
+  Requests keyboard input focus.
+
+<!-- ---------------------------------------------------------------------------------------- -->
 
 * <a id="view_getLayoutContext">**`     view:getLayoutContext()
   `**</a>

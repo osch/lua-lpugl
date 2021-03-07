@@ -796,8 +796,36 @@ static int View_isClosed(lua_State* L)
 static int View_isVisible(lua_State* L)
 {
     ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
     lua_pushboolean(L, puglGetVisible(udata->puglView));
     return 1;
+}
+/* ============================================================================================ */
+
+static int View_hasFocus(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    lua_pushboolean(L, puglHasFocus(udata->puglView));
+    return 1;
+}
+
+/* ============================================================================================ */
+
+static int View_grabFocus(lua_State* L)
+{
+    ViewUserData* udata = luaL_checkudata(L, 1, LPUGL_VIEW_CLASS_NAME);
+    if (!udata->puglView) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }
+    if (puglGrabFocus(udata->puglView) != PUGL_SUCCESS) {
+        return lpugl_ERROR_FAILED_OPERATION(L);
+    }
+    return 0;
 }
 
 /* ============================================================================================ */
@@ -1143,6 +1171,8 @@ static const luaL_Reg ViewMethods[] =
     { "close",              View_close        },
     { "isClosed",           View_isClosed     },
     { "isVisible",          View_isVisible    },
+    { "hasFocus",           View_hasFocus     },
+    { "grabFocus",          View_grabFocus    },
     { "getDrawContext",     View_getDrawContext   },
     { "getLayoutContext",   View_getLayoutContext },
     { "setFrame",           View_setFrame        },
