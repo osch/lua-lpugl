@@ -116,6 +116,21 @@ updateViewRect(PuglView* view)
     view->frame.width  = contentPx.size.width;
     view->frame.height = contentPx.size.height;
   }
+  else {
+    const NSRect contentPt     = [view->impl->wrapperView frame];
+    const NSRect contentPx     = nsRectFromPoints(view, contentPt);
+    NSView* const superView    = [view->impl->wrapperView superview];
+    view->frame.x = contentPx.origin.x;
+    view->frame.y = contentPx.origin.y;
+    if (superView && ![superView isFlipped]) {
+        const NSRect superFramePt = [superView frame];
+        const NSRect superFramePx = nsRectFromPoints(view, superFramePt);
+        const double superHeight  = superFramePx.size.height;
+        view->frame.y = superHeight - contentPx.origin.y - contentPx.size.height;
+    }
+    view->frame.width  = contentPx.size.width;
+    view->frame.height = contentPx.size.height;
+  }
 }
 
 @interface PuglWorldProxy : NSObject {
@@ -409,6 +424,42 @@ rescheduleProcessTimer(PuglWorld* world)
   return puglview &&
          !(puglview->transientParent && puglview->hints[PUGL_IS_POPUP]);
 }
+
+- (void)handleFocusIn: (NSNotification*)notification
+{
+  if (puglview) {
+    PuglEvent ev  = {{PUGL_FOCUS_IN, 0}};
+    ev.focus.mode = PUGL_CROSSING_NORMAL;
+    puglDispatchEvent(puglview, &ev);
+  }
+}
+- (void)handleFocusOut: (NSNotification*)notification
+{
+  if (puglview) {
+    PuglEvent ev  = {{PUGL_FOCUS_OUT, 0}};
+    ev.focus.mode = PUGL_CROSSING_NORMAL;
+    puglDispatchEvent(puglview, &ev);
+  }
+}
+
+- (void)viewDidMoveToWindow
+{
+  if (puglview) {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    NSWindow* window = [self window];
+    if (window) {
+      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleFocusIn:) 
+                                                             name:NSWindowDidBecomeKeyNotification
+                                                             object:window];
+      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleFocusOut:) 
+                                                             name:NSWindowDidResignKeyNotification
+                                                             object:window];
+      [window setAcceptsMouseMovedEvents:YES];
+      [window makeFirstResponder:self];
+    }
+  }
+}
+
 
 - (void)setReshaped
 {
@@ -778,7 +829,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
 
 - (void)keyDown:(NSEvent*)event
 {
-  if (!puglview ||
+  if (!event || !puglview ||
       (puglview->hints[PUGL_IGNORE_KEY_REPEAT] && [event isARepeat])) {
     return;
   }
@@ -801,6 +852,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
     getModifiers(event),
     [event keyCode],
     (code != 0xFFFD) ? code : 0,
+    {0}, 0
   };
 
   if (!spec) {
@@ -833,6 +885,7 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
     getModifiers(event),
     [event keyCode],
     (code != 0xFFFD) ? code : 0,
+    {0}, 0
   };
 
   puglDispatchEvent(puglview, (PuglEvent*)&ev);
@@ -956,7 +1009,9 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
                           [[NSScreen mainScreen] frame].size.height - rloc.y,
                           getModifiers(ev),
                           0,  // keycode
-                          0}; // key
+                          0, // key
+                          {0}, 0};
+
     char*          newInput;
     if (len > 8) {
       newInput = malloc(len);
@@ -1008,7 +1063,8 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
                        [[NSScreen mainScreen] frame].size.height - rloc.y,
                        mods,
                        [event keyCode],
-                       special};
+                       special,
+                       {0}, 0};
     puglDispatchEvent(puglview, (PuglEvent*)&ev);
   }
 
@@ -1093,24 +1149,6 @@ handleCrossing(PuglWrapperView* view, NSEvent* event, const PuglEventType type)
     puglview->frame.height,
   };
   puglDispatchEvent(puglview, (PuglEvent*)&ev);
-}
-
-- (void)windowDidBecomeKey:(NSNotification*)notification
-{
-  (void)notification;
-
-  PuglEvent ev  = {{PUGL_FOCUS_IN, 0}};
-  ev.focus.mode = PUGL_CROSSING_NORMAL;
-  puglDispatchEvent(window->puglview, &ev);
-}
-
-- (void)windowDidResignKey:(NSNotification*)notification
-{
-  (void)notification;
-
-  PuglEvent ev  = {{PUGL_FOCUS_OUT, 0}};
-  ev.focus.mode = PUGL_CROSSING_NORMAL;
-  puglDispatchEvent(window->puglview, &ev);
 }
 
 @end
@@ -1244,7 +1282,7 @@ puglRealize(PuglView* view)
                                     framePx.size.height / scaleFactor);
 
   // Create wrapper view to handle input
-  impl->wrapperView             = [PuglWrapperView alloc];
+  impl->wrapperView             = [[PuglWrapperView alloc] init];
   impl->wrapperView->puglview   = view;
   impl->wrapperView->markedText = [[NSMutableAttributedString alloc] init];
   [impl->wrapperView setAutoresizesSubviews:YES];
@@ -1417,28 +1455,32 @@ puglFreeViewInternals(PuglView* view)
 
     if (view->impl) {
       PuglWrapperView* wrapperView = view->impl->wrapperView;
-      if (wrapperView->trackingArea) {
-        [wrapperView->trackingArea release];
-        wrapperView->trackingArea = NULL;
+      if (wrapperView) {
+        if (wrapperView->trackingArea) {
+          [wrapperView->trackingArea release];
+          wrapperView->trackingArea = NULL;
+        }
+        if (wrapperView->markedText) {
+          [wrapperView->markedText release];
+          wrapperView->markedText = NULL;
+        }
+        [wrapperView removeFromSuperview];
+        wrapperView->puglview = NULL;
+        [wrapperView release];
+        view->impl->wrapperView = NULL;
       }
-      if (wrapperView->markedText) {
-        [wrapperView->markedText release];
-        wrapperView->markedText = NULL;
-      }
-      [wrapperView removeFromSuperview];
-      wrapperView->puglview = NULL;
-      [wrapperView release];
-
       if (view->impl->window) {
         view->impl->window->puglview = NULL;
         [view->impl->window close];
         [view->impl->window release];
+        view->impl->window = NULL;
       }
       if (view->impl->cursor) {
         [view->impl->cursor release];
         view->impl->cursor = NULL;
       }
       free(view->impl);
+      view->impl = NULL;
     }
   }
 }
@@ -1447,9 +1489,10 @@ PuglStatus
 puglGrabFocus(PuglView* view)
 {
   NSWindow* window = [view->impl->wrapperView window];
-
-  [window makeKeyWindow];
-  [window makeFirstResponder:view->impl->wrapperView];
+  if (window) {
+    [window makeKeyWindow];
+    [window makeFirstResponder:view->impl->wrapperView];
+  }
   return PUGL_SUCCESS;
 }
 
