@@ -33,4 +33,23 @@
   #endif
 #endif
 
+#if defined(__OBJC__) && defined(LPUGL_MACOS_CLASS_SUFFIX)
+
+    #define PUGL_OBJC_CLASS_NAM3(NAME,SUFFIX) NAME ## _ ## SUFFIX
+    #define PUGL_OBJC_CLASS_NAM2(NAME,SUFFIX) PUGL_OBJC_CLASS_NAM3(NAME, SUFFIX)
+    #define PUGL_OBJC_CLASS_NAME(NAME) PUGL_OBJC_CLASS_NAM2(NAME, LPUGL_MACOS_CLASS_SUFFIX)
+
+    #define PuglCairoGLView    PUGL_OBJC_CLASS_NAME(PuglCairoGLView)
+    #define PuglCairoView      PUGL_OBJC_CLASS_NAME(PuglCairoView)
+    #define PuglOpenGLView     PUGL_OBJC_CLASS_NAME(PuglOpenGLView)
+    #define PuglStubView       PUGL_OBJC_CLASS_NAME(PuglStubView)
+    #define PuglWindow         PUGL_OBJC_CLASS_NAME(PuglWindow)
+    #define PuglWindowDelegate PUGL_OBJC_CLASS_NAME(PuglWindowDelegate)
+    #define PuglWorldProxy     PUGL_OBJC_CLASS_NAME(PuglWorldProxy)
+    #define PuglWrapperView    PUGL_OBJC_CLASS_NAME(PuglWrapperView)
+    
+#endif
+
+
+
 #endif // LPUGL_INIT_H
