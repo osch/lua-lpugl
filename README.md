@@ -2,11 +2,18 @@
 [![Licence](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENSE)
 [![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen.svg)](https://luarocks.org/modules/osch/lpugl)
 
-LPugl is a minimal Lua-API for building GUIs. It is based on [Pugl], a minimal
-portable API for embeddable GUIs.
+LPugl is a minimal Lua-API for building GUIs. It is based on [Pugl] (*PlUgin Graphics Library*), 
+a minimal portable API for embeddable GUIs.
 
 LPugl provides only a very minimal API. See [lwtk] (*Lua Widget Toolkit*)
 for implementing GUI widgets on top of LPugl.
+
+Like Pugl, LPugl does only have explicit context and no static data, so it's
+possible to have several instances within the same program and even within 
+the same Lua main state. Therefore LPugl is especially suited for building 
+GUIs for plugins or components within larger applications. For example 
+see [LDPF-Examples]: here LPugl is used for the GUI of audio processing plugins 
+with [DPF] (*DISTRHO Plugin Framework*).
 
 #### Supported platforms: 
    * X11
@@ -75,6 +82,8 @@ application and also in the same window by embedding different view objects.
     ```
 
 [Pugl]:                     https://drobilla.net/software/pugl
+[DPF]:                      https://github.com/DISTRHO/DPF
+[LDPF-Examples]:            https://github.com/LDPF/LDPF-Examples
 [OOCairo]:                  https://luarocks.org/modules/osch/oocairo
 [lwtk]:                     https://github.com/osch/lua-lwtk#lwtk---lua-widget-toolkit
 [lpugl]:                    https://luarocks.org/modules/osch/lpugl
