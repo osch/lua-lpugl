@@ -53,7 +53,6 @@ build = {
     lpugl = {
       sources = { "src/pugl.c",
                   "src/async_util.c",
-                  "src/compat-5.3.c",
                   "src/error.c",
                   "src/lpugl.c",
                   "src/lpugl_compat.c",
