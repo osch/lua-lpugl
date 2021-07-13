@@ -539,6 +539,36 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 
                 puglSetSize(udata->puglView, w, h);
             }
+            else if (checkArgTableValueType(L, initArg, key, "minSize", LUA_TTABLE)) 
+            {                                                 /* -> udata, key, value */
+                if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, w */
+                    || lua_rawgeti(L, -2, 2) != LUA_TNUMBER)  /* -> udata, key, value, w, h */
+                {
+                    return luaL_argerror(L, initArg, "invalid 'minSize' value");
+                }
+                int w = floor(lua_tonumber(L, -2) + 0.5);
+                int h = floor(lua_tonumber(L, -1) + 0.5);
+                lua_pop(L, 2);                                /* -> udata, key, value */
+                
+                puglSetMinSize(udata->puglView, w, h);
+            }
+            else if (checkArgTableValueType(L, initArg, key, "maxSize", LUA_TTABLE)) 
+            {                                                 /* -> udata, key, value */
+                if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, w */
+                    || lua_rawgeti(L, -2, 2) != LUA_TNUMBER)  /* -> udata, key, value, w, h */
+                {
+                    return luaL_argerror(L, initArg, "invalid 'maxSize' value");
+                }
+                int w = lua_tonumber(L, -2);
+                int h = lua_tonumber(L, -1);
+                lua_pop(L, 2);                                /* -> udata, key, value */
+                
+                if (w > 0 && h > 0) {
+                    w = floor(w + 0.5);
+                    h = floor(h + 0.5);
+                }
+                puglSetMaxSize(udata->puglView, w, h);
+            }
             else if (checkArgTableValueType(L, initArg, key, "frame", LUA_TTABLE)) 
             {                                                 /* -> udata, key, value */
                 if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, x */

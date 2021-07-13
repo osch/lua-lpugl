@@ -531,6 +531,32 @@ static int World_getDefaultBackend(lua_State* L)
 
 /* ============================================================================================ */
 
+static int World_getLayoutContext(lua_State* L)
+{
+    WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
+
+    if (udata->restricted) {
+        return lpugl_ERROR_RESTRICTED_ACCESS(L);
+    }
+    if (!udata->world) {
+        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
+    }    
+    lua_getuservalue(L, 1);                         /* -> uservalue */
+    lua_rawgeti(L, -1, LPUGL_WORLD_UV_DEFBACKEND);  /* -> uservalue, backend */
+    
+    if (   lua_isuserdata(L, -1)
+        && lua_getfield(L, -1, "getLayoutContext") == LUA_TFUNCTION)  /* -> uservalue, backend, getLayoutContext */
+    {
+        lua_pushvalue(L, -2);                                         /* -> uservalue, backend, getLayoutContext, backend */
+        lua_call(L, 1, 1);                                            /* -> uservalue, backend, rslt */
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/* ============================================================================================ */
+
 static int World_toString(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
@@ -903,6 +929,7 @@ static const luaL_Reg WorldMethods[] =
 {
     { "setDefaultBackend",  World_setDefaultBackend  },
     { "getDefaultBackend",  World_getDefaultBackend  },
+    { "getLayoutContext",   World_getLayoutContext   },
     { "id",                 World_id                 },
     { "newView",            World_newView            },
     { "update",             World_update             },
