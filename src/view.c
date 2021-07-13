@@ -219,6 +219,8 @@ static PuglStatus handleEvent(PuglView* view, const PuglEvent* event)
         case PUGL_LOOP_LEAVE:         eventName = NULL; break;
     }
     if (eventName) {
+        world->hadEvent = true;
+        
         lua_pushcfunction(L, lpugl_world_errormsghandler);
         int msgh = lua_gettop(L);
         for (int i = 0; i <= nargs; ++i) {

@@ -32,6 +32,7 @@ typedef struct LpuglWorld {
     int                   viewCount;
     lua_State*            eventL;
     bool                  inCallback;
+    bool                  hadEvent;
     bool                  mustClosePugl;
     AtomicCounter         awakeSent;
     void                  (*registrateBackend)(lua_State* L, int worldIdx, int backendIdx);

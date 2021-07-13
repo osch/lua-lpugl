@@ -141,7 +141,8 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
         abort();
     }
     atomic_set(&world->awakeSent, 0);
-    
+    world->hadEvent = true;
+
     lua_State* L = world->eventL;
     int oldTop = lua_gettop(L);
     
@@ -165,6 +166,7 @@ static PuglStatus lpugl_world_process(PuglWorld* puglWorld, void* voidData)
         lua_settop(L, oldTop);
         return PUGL_SUCCESS;
     }
+
     int rc = lua_pcall(L, 0, 0, msgh);                                      /* -> weakWorld, worldUdata, worldUservalue, ? */
 
     world->inCallback = wasInCallback;
@@ -616,9 +618,30 @@ static int World_update(lua_State* L)
     bool wasInCallback = world->inCallback;
     world->inCallback = true;
 
-    PuglStatus status = puglUpdate(world->puglWorld, timeout);
-    world->inCallback = wasInCallback;
+    bool wasHadEvent = world->hadEvent;
+    world->hadEvent = false;
     
+    double endTime = (timeout < 0) ? -1 : puglGetTime(world->puglWorld) + timeout;
+    PuglStatus status;
+again:
+    status = puglUpdate(world->puglWorld, timeout);
+
+#ifdef LPUGL_USE_X11
+    if (!world->hadEvent && (status == PUGL_SUCCESS || status == PUGL_FAILURE)) {
+        if (timeout >= 0) {
+            timeout = endTime - puglGetTime(world->puglWorld);
+            if (timeout > 0) {
+                goto again;
+            }
+        }
+    }
+#endif
+    world->inCallback = wasInCallback;
+    if (!wasInCallback) {
+        world->hadEvent = false;
+    } else {
+        world->hadEvent = world->hadEvent || wasHadEvent;
+    }
     if (status == PUGL_SUCCESS || status == PUGL_FAILURE) {
         // PUGL_SUCCESS=hadEvents, PUGL_FAILURE=noEvents
         lua_pushboolean(L, status == PUGL_SUCCESS);
