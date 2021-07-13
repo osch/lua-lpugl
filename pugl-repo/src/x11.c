@@ -439,7 +439,6 @@ puglRealize(PuglView* view)
   const int            screen  = DefaultScreen(display);
   const Window         root    = RootWindow(display, screen);
   const Window         parent  = view->parent ? (Window)view->parent : root;
-  XSetWindowAttributes attr    = {0};
   PuglStatus           st      = PUGL_SUCCESS;
 
   // Ensure that we're unrealized and that a reasonable backend has been set
@@ -465,7 +464,24 @@ puglRealize(PuglView* view)
   }
 
   // Create a colormap based on the visual info from the backend
-  attr.colormap = XCreateColormap(display, parent, impl->vi->visual, AllocNone);
+  impl->colormap = XCreateColormap(display, parent, impl->vi->visual, AllocNone);
+
+
+  XSetWindowAttributes attr      = {0};
+  unsigned long        valuemask = 0;
+
+  if (view->backgroundColor >= 0) {
+      uint32_t c = view->backgroundColor;
+      uint32_t cscale = 0xffff/0xff;
+      XColor xcolor = { 0, ((c >> 16) & 0xff)*cscale, 
+                           ((c >>  8) & 0xff)*cscale, 
+                           ((c      ) & 0xff)*cscale, 0, 0 };
+      XAllocColor(display, impl->colormap, &xcolor);
+      attr.background_pixel = xcolor.pixel;
+      valuemask |= CWBackPixel;
+  }
+  
+  attr.colormap = impl->colormap;
 
   // Set the event mask to request all of the event types we react to
   attr.event_mask |= ButtonPressMask;
@@ -482,6 +498,7 @@ puglRealize(PuglView* view)
   attr.event_mask |= PropertyChangeMask;
 
   attr.override_redirect = view->hints[PUGL_IS_POPUP];
+  attr.bit_gravity = StaticGravity;
 
   impl->win = XCreateWindow(display,
                             parent,
@@ -493,7 +510,7 @@ puglRealize(PuglView* view)
                             impl->vi->depth,
                             InputOutput,
                             impl->vi->visual,
-                            CWColormap | CWEventMask, // | CWOverrideRedirect,
+                            valuemask | CWColormap | CWEventMask | CWBitGravity, // | CWOverrideRedirect,
                             &attr);
 
   bool isTransient = !view->parent && view->transientParent;
@@ -673,8 +690,11 @@ puglFreeViewInternals(PuglView* view)
     if (view->backend) {
       view->backend->destroy(view);
     }
-    if (view->impl->display) {
+    if (view->impl->win) {
       XDestroyWindow(view->impl->display, view->impl->win);
+    }
+    if (view->impl->colormap) {
+      XFreeColormap(view->impl->display, view->impl->colormap);
     }
     if (view->impl->vi) {
       XFree(view->impl->vi);

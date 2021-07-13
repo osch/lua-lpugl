@@ -526,6 +526,10 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 dontMergeRects = lua_toboolean(L, -1);
                 puglSetViewHint(udata->puglView, PUGL_DONT_MERGE_RECTS, dontMergeRects);
             }
+            else if (checkArgTableValueType(L, initArg, key, "backgroundColor", LUA_TNUMBER))
+            {
+                puglSetBackgroundColor(udata->puglView, lua_tointeger(L, -1));
+            }
             else if (checkArgTableValueType(L, initArg, key, "size", LUA_TTABLE)) 
             {                                                 /* -> udata, key, value */
                 if (   lua_rawgeti(L, -1, 1) != LUA_TNUMBER   /* -> udata, key, value, w */

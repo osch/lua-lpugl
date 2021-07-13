@@ -1164,6 +1164,17 @@ PUGL_API
 PuglStatus
 puglSetTransientFor(PuglView* view, PuglNativeView parent);
 
+
+/**
+   Set a backgroundcolor (X11 only).
+
+   This only has an effect when called before puglRealize().
+*/
+PUGL_API
+void
+puglSetBackgroundColor(PuglView* view, int color);
+
+
 /**
    Realize a view by creating a corresponding system view or window.
 

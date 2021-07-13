@@ -247,6 +247,7 @@ puglNewView(PuglWorld* const world)
   if (!view) {
     return NULL;
   }
+  view->backgroundColor = -1;
   if (!puglRectsInit(&view->rects, 4)) {
     free(view);
     return NULL;
@@ -593,4 +594,11 @@ puglSetInternalClipboard(PuglWorld* const  world,
 
   puglSetBlob(&world->clipboard, data, len);
   return PUGL_SUCCESS;
+}
+
+void
+puglSetBackgroundColor(PuglView* view,
+                       int       color)
+{
+  view->backgroundColor = color;
 }

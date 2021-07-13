@@ -67,6 +67,7 @@ struct PuglViewImpl {
   PuglRect           frame;
   PuglRects          rects;
   PuglRects          rects2;
+  int                backgroundColor;
   int                reqX;
   int                reqY;
   int                reqWidth;

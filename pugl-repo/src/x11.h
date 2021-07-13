@@ -71,6 +71,7 @@ struct PuglWorldInternalsImpl {
 struct PuglInternalsImpl {
   Display*     display;
   XVisualInfo* vi;
+  Colormap     colormap;
   Window       win;
   XIC          xic;
   PuglSurface* surface;
