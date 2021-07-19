@@ -1276,6 +1276,17 @@ addPendingExpose(PuglView* view, const PuglEventExpose* expose)
   }
 }
 
+static void
+triggerFullExposure(PuglView* view)
+{
+  PuglRect rect = { 0, 0, view->frame.width, view->frame.height };
+  view->impl->pendingExpose.expose.type =PUGL_NOTHING;
+  mergeExposeEvents(&view->impl->pendingExpose.expose, &rect);
+  view->rects.rectsList[0] = rect;
+  view->rects.rectsCount   = 1;
+  
+}
+
 void
 puglAwake(PuglWorld* world)
 {
@@ -1440,6 +1451,7 @@ puglDispatchX11Events(PuglWorld* world)
       view->frame.y                = event.configure.y;
       view->frame.width            = event.configure.width;
       view->frame.height           = event.configure.height;
+      triggerFullExposure(view);
     } else if (event.type == PUGL_MAP && view->parent) {
       XWindowAttributes attrs;
       XGetWindowAttributes(view->impl->display, view->impl->win, &attrs);
