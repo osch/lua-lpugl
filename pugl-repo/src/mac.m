@@ -294,6 +294,11 @@ rescheduleProcessTimer(PuglWorld* world)
   NSMutableAttributedString* markedText;
   bool                       reshaped;
   PuglEventKey*              processingKeyEvent;
+
+  NSLayoutConstraint*        minWidthConstraint;
+  NSLayoutConstraint*        minHeightConstraint;
+  NSLayoutConstraint*        maxWidthConstraint;
+  NSLayoutConstraint*        maxHeightConstraint;
 }
 
 - (void)dispatchExpose:(NSRect)rect
@@ -1215,19 +1220,6 @@ puglInitViewInternals(void)
   return impl;
 }
 
-static NSLayoutConstraint*
-puglConstraint(id item, NSLayoutAttribute attribute, float constant)
-{
-  return
-    [NSLayoutConstraint constraintWithItem:item
-                                 attribute:attribute
-                                 relatedBy:NSLayoutRelationGreaterThanOrEqual
-                                    toItem:nil
-                                 attribute:NSLayoutAttributeNotAnAttribute
-                                multiplier:1.0
-                                  constant:(CGFloat)constant];
-}
-
 PuglStatus
 puglRealize(PuglView* view)
 {
@@ -1287,12 +1279,51 @@ puglRealize(PuglView* view)
   impl->wrapperView->markedText = [[NSMutableAttributedString alloc] init];
   [impl->wrapperView setAutoresizesSubviews:YES];
   [impl->wrapperView initWithFrame:framePt];
-  [impl->wrapperView addConstraint:puglConstraint(impl->wrapperView,
-                                                  NSLayoutAttributeWidth,
-                                                  view->minWidth)];
-  [impl->wrapperView addConstraint:puglConstraint(impl->wrapperView,
-                                                  NSLayoutAttributeHeight,
-                                                  view->minHeight)];
+  if (view->minWidth) {
+    impl->wrapperView->minWidthConstraint = 
+        [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                      attribute:NSLayoutAttributeWidth
+                                      relatedBy:NSLayoutRelationGreaterThanOrEqual
+                                         toItem:nil
+                                      attribute:NSLayoutAttributeNotAnAttribute
+                                     multiplier:1.0
+                                       constant:(CGFloat)view->minWidth / scaleFactor] retain];
+      [impl->wrapperView addConstraint:impl->wrapperView->minWidthConstraint];
+  }
+  if (view->minHeight) {
+    impl->wrapperView->minHeightConstraint = 
+        [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                      attribute:NSLayoutAttributeHeight
+                                      relatedBy:NSLayoutRelationGreaterThanOrEqual
+                                         toItem:nil
+                                      attribute:NSLayoutAttributeNotAnAttribute
+                                     multiplier:1.0
+                                       constant:(CGFloat)view->minHeight / scaleFactor] retain];
+      [impl->wrapperView addConstraint:impl->wrapperView->minHeightConstraint];
+  }
+  if (view->maxWidth > 0) {
+    impl->wrapperView->maxWidthConstraint = 
+        [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                      attribute:NSLayoutAttributeWidth
+                                      relatedBy:NSLayoutRelationLessThanOrEqual
+                                         toItem:nil
+                                      attribute:NSLayoutAttributeNotAnAttribute
+                                     multiplier:1.0
+                                       constant:(CGFloat)view->maxWidth / scaleFactor] retain];
+    [impl->wrapperView addConstraint:impl->wrapperView->maxWidthConstraint];
+  }
+  if (view->maxHeight > 0) {
+    impl->wrapperView->maxHeightConstraint = 
+        [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                      attribute:NSLayoutAttributeHeight
+                                      relatedBy:NSLayoutRelationLessThanOrEqual
+                                         toItem:nil
+                                      attribute:NSLayoutAttributeNotAnAttribute
+                                     multiplier:1.0
+                                       constant:(CGFloat)view->maxHeight / scaleFactor] retain];
+    [impl->wrapperView addConstraint:impl->wrapperView->maxHeightConstraint];
+  }
+
   [impl->wrapperView setReshaped];
 
   // Create draw view to be rendered to
@@ -1346,6 +1377,16 @@ puglRealize(PuglView* view)
     if (view->hints[PUGL_RESIZABLE] && (view->minWidth || view->minHeight)) {
       [window
         setContentMinSize:sizePoints(view, view->minWidth, view->minHeight)];
+    }
+    if (view->hints[PUGL_RESIZABLE] && (view->maxWidth || view->maxHeight)) {
+        NSSize scaled = sizePoints(view, view->maxWidth, view->maxHeight);
+        if (view->maxWidth < 0) {
+          scaled.width = CGFLOAT_MAX;
+        }
+        if (view->maxHeight < 0) {
+          scaled.height = CGFLOAT_MAX;
+        }
+        [view->impl->window setContentMaxSize:scaled];
     }
     impl->window = window;
 
@@ -1463,6 +1504,22 @@ puglFreeViewInternals(PuglView* view)
         if (wrapperView->markedText) {
           [wrapperView->markedText release];
           wrapperView->markedText = NULL;
+        }
+        if (wrapperView->minWidthConstraint) {
+          [wrapperView->minWidthConstraint release];
+          wrapperView->minWidthConstraint = NULL;
+        }
+        if (wrapperView->minHeightConstraint) {
+          [wrapperView->minHeightConstraint release];
+          wrapperView->minHeightConstraint = NULL;
+        }
+        if (wrapperView->maxWidthConstraint) {
+          [wrapperView->maxWidthConstraint release];
+          wrapperView->maxWidthConstraint = NULL;
+        }
+        if (wrapperView->maxHeightConstraint) {
+          [wrapperView->maxHeightConstraint release];
+          wrapperView->maxHeightConstraint = NULL;
         }
         [wrapperView removeFromSuperview];
         wrapperView->puglview = NULL;
@@ -1803,6 +1860,9 @@ puglSetSize(PuglView* view, int width, int height)
 PuglStatus
 puglSetMinSize(PuglView* const view, const int width, const int height)
 {
+  const NSScreen* const screen      = [NSScreen mainScreen];
+  const double          scaleFactor = [screen backingScaleFactor];
+
   view->minWidth  = width;
   view->minHeight = height;
 
@@ -1810,13 +1870,51 @@ puglSetMinSize(PuglView* const view, const int width, const int height)
     [view->impl->window
       setContentMinSize:sizePoints(view, view->minWidth, view->minHeight)];
   }
-
+  PuglInternals* impl = view->impl;
+  if (impl->wrapperView) {
+    if (impl->wrapperView->minHeightConstraint) {
+      [impl->wrapperView removeConstraint: impl->wrapperView->minHeightConstraint];
+      [impl->wrapperView->minHeightConstraint release];
+      impl->wrapperView->minHeightConstraint = NULL;
+    }
+    
+    if (impl->wrapperView->minWidthConstraint) {
+      [impl->wrapperView removeConstraint: impl->wrapperView->minWidthConstraint];
+      [impl->wrapperView->minWidthConstraint release];
+      impl->wrapperView->minWidthConstraint = NULL;
+    }
+    if (width > 0) {
+      impl->wrapperView->minWidthConstraint = 
+          [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                        attribute:NSLayoutAttributeWidth
+                                        relatedBy:NSLayoutRelationGreaterThanOrEqual
+                                           toItem:nil
+                                        attribute:NSLayoutAttributeNotAnAttribute
+                                       multiplier:1.0
+                                         constant:(CGFloat)view->minWidth / scaleFactor] retain];
+        [impl->wrapperView addConstraint:impl->wrapperView->minWidthConstraint];
+    }
+    if (height > 0) {
+      impl->wrapperView->minHeightConstraint = 
+          [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                        attribute:NSLayoutAttributeHeight
+                                        relatedBy:NSLayoutRelationGreaterThanOrEqual
+                                           toItem:nil
+                                        attribute:NSLayoutAttributeNotAnAttribute
+                                       multiplier:1.0
+                                         constant:(CGFloat)view->minHeight / scaleFactor] retain];
+        [impl->wrapperView addConstraint:impl->wrapperView->minHeightConstraint];
+    }
+  }
   return PUGL_SUCCESS;
 }
 
 PuglStatus
 puglSetMaxSize(PuglView* const view, const int width, const int height)
 {
+  const NSScreen* const screen      = [NSScreen mainScreen];
+  const double          scaleFactor = [screen backingScaleFactor];
+
   view->maxWidth  = width;
   view->maxHeight = height;
 
@@ -1832,6 +1930,41 @@ puglSetMaxSize(PuglView* const view, const int width, const int height)
     [view->impl->window setContentMaxSize:scaled];
   }
 
+  PuglInternals* impl = view->impl;
+  if (impl->wrapperView) {
+    if (impl->wrapperView->maxHeightConstraint) {
+      [impl->wrapperView removeConstraint: impl->wrapperView->maxHeightConstraint];
+      [impl->wrapperView->maxHeightConstraint release];
+      impl->wrapperView->maxHeightConstraint = NULL;
+    }
+    if (impl->wrapperView->maxWidthConstraint) {
+      [impl->wrapperView removeConstraint: impl->wrapperView->maxWidthConstraint];
+      [impl->wrapperView->maxWidthConstraint release];
+      impl->wrapperView->maxWidthConstraint = NULL;
+    }
+    if (width > 0) {
+      impl->wrapperView->maxWidthConstraint = 
+          [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                        attribute:NSLayoutAttributeWidth
+                                        relatedBy:NSLayoutRelationLessThanOrEqual
+                                           toItem:nil
+                                        attribute:NSLayoutAttributeNotAnAttribute
+                                       multiplier:1.0
+                                         constant:(CGFloat)view->maxWidth / scaleFactor] retain];
+        [impl->wrapperView addConstraint:impl->wrapperView->maxWidthConstraint];
+    }
+    if (height > 0) {
+      impl->wrapperView->maxHeightConstraint = 
+          [[NSLayoutConstraint constraintWithItem:impl->wrapperView
+                                        attribute:NSLayoutAttributeHeight
+                                        relatedBy:NSLayoutRelationLessThanOrEqual
+                                           toItem:nil
+                                        attribute:NSLayoutAttributeNotAnAttribute
+                                       multiplier:1.0
+                                         constant:(CGFloat)view->maxHeight / scaleFactor] retain];
+        [impl->wrapperView addConstraint:impl->wrapperView->maxHeightConstraint];
+    }
+  }
   return PUGL_SUCCESS;
 }
 

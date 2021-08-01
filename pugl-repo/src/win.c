@@ -1450,6 +1450,13 @@ puglSetMinSize(PuglView* const view, const int width, const int height)
 {
   view->minWidth  = width;
   view->minHeight = height;
+
+  PuglRect r = puglGetFrame(view);
+  if (r.width < width || r.height < height) {
+    int w = (r.width  > width)  ? r.width  : width;
+    int h = (r.height > height) ? r.height : height;
+    puglSetSize(view, w, h);
+  }
   return PUGL_SUCCESS;
 }
 
@@ -1458,6 +1465,12 @@ puglSetMaxSize(PuglView* const view, const int width, const int height)
 {
   view->maxWidth  = width;
   view->maxHeight = height;
+  PuglRect r = puglGetFrame(view);
+  if ((width > 0 && r.width > width) || (height > 0 && r.height > height)) {
+    int w = (width  <= 0 || r.width  < width)  ? r.width  : width;
+    int h = (height <= 0 || r.height < height) ? r.height : height;
+    puglSetSize(view, w, h);
+  }
   return PUGL_SUCCESS;
 }
 

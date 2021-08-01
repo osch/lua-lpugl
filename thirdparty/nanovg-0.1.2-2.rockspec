@@ -26,7 +26,9 @@ build = {
          sources = {
             "lua-nanovg.c",
             "nanovg/src/nanovg.c"
-         }
+         },
+         incdirs = { "include", "$(GL_INCDIR)" },
+         libdirs = { "$(GL_LIBDIR)" },
       }
    },
    platforms = {
