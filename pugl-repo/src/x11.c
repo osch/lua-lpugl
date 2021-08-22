@@ -1446,12 +1446,16 @@ puglDispatchX11Events(PuglWorld* world)
       addPendingExpose(view, &event.expose);
     } else if (event.type == PUGL_CONFIGURE) {
       // Expand configure event to be dispatched after loop
+      bool sizeChanged =  view->frame.width  != event.configure.width
+                       || view->frame.height != event.configure.height;
       view->impl->pendingConfigure = event;
       view->frame.x                = event.configure.x;
       view->frame.y                = event.configure.y;
       view->frame.width            = event.configure.width;
       view->frame.height           = event.configure.height;
-      triggerFullExposure(view);
+      if (sizeChanged) {
+        triggerFullExposure(view);
+      }
     } else if (event.type == PUGL_MAP && view->parent) {
       XWindowAttributes attrs;
       XGetWindowAttributes(view->impl->display, view->impl->win, &attrs);
