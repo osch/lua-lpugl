@@ -1,5 +1,5 @@
 package = "lpugl"
-version = "0.0.1-1"
+version = "0.0.2-1"
 local versionNumber = version:gsub("^(.*)-.-$", "%1")
 source = {
   url = "https://github.com/osch/lua-lpugl/archive/v"..versionNumber..".zip",
