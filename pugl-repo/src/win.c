@@ -1301,13 +1301,13 @@ worldWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         deleteProcessTimer(world);
       }
     }
-    break;
+    return 0;
   case PUGL_LOCAL_AWAKE_MSG:
     if (world && hwnd == world->impl->pseudoWin) {
       if (world->processFunc)
         world->processFunc(world, world->processUserData);
     }
-    break;
+    return 0;
   default:
     return DefWindowProcW(hwnd, message, wParam, lParam);
   }
