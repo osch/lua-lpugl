@@ -6,6 +6,7 @@
 #include "error.h"
 #include "version.h"
 #include "backend.h"
+#include "notify_capi.h"
 
 /* ============================================================================================ */
 
@@ -840,6 +841,15 @@ static int World_setNextProcessTime(lua_State* L)
 
 /* ============================================================================================ */
 
+static void awakeWorld(LpuglWorld* world)
+{
+    async_lock_acquire(&world->lock);
+        if (world->puglWorld && atomic_set_if_equal(&world->awakeSent, 0, 1)) {
+            puglAwake(world->puglWorld);
+        }
+    async_lock_release(&world->lock);    
+}
+
 static int World_awake(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
@@ -848,12 +858,7 @@ static int World_awake(lua_State* L)
     if (!world) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }    
-
-    async_lock_acquire(&world->lock);
-        if (world->puglWorld && atomic_set_if_equal(&world->awakeSent, 0, 1)) {
-            puglAwake(world->puglWorld);
-        }
-    async_lock_release(&world->lock);    
+    awakeWorld(world);
     return 0;
 }
 
@@ -925,6 +930,66 @@ static int World_getScreenScale(lua_State* L)
 
 /* ============================================================================================ */
 
+static notify_notifier* notify_capi_toNotifier(lua_State* L, int index)
+{
+    void* world = lua_touserdata(L, index);
+    if (world) {
+        if (lua_getmetatable(L, index))
+        {                                                      /* -> meta1 */
+            if (luaL_getmetatable(L, LPUGL_WORLD_CLASS_NAME)
+                != LUA_TNIL)                                   /* -> meta1, meta2 */
+            {
+                if (lua_rawequal(L, -1, -2)) {                 /* -> meta1, meta2 */
+                    world = ((WorldUserData*)world)->world;
+                } else {
+                    world = NULL;
+                }
+            }                                                  /* -> meta1, meta2 */
+            lua_pop(L, 2);                                     /* -> */
+        }                                                      /* -> */
+    }
+    return world;
+}
+
+static void notify_capi_retainNotifier(notify_notifier* n)
+{
+    LpuglWorld* world = (LpuglWorld*)n;
+    atomic_inc(&world->used);
+}
+
+static void notify_capi_releaseNotifier(notify_notifier* n)
+{
+    LpuglWorld* world = (LpuglWorld*)n;
+    if (world) {
+        if (atomic_dec(&world->used) <= 0) {
+            destructWorld(world);
+        }
+    }
+}
+
+static void notify_capi_notify(notify_notifier* n)
+{
+    LpuglWorld* world = (LpuglWorld*)n;
+    awakeWorld(world);
+}
+
+static const notify_capi notify_capi_impl =
+{
+    NOTIFY_CAPI_VERSION_MAJOR,
+    NOTIFY_CAPI_VERSION_MINOR,
+    NOTIFY_CAPI_VERSION_PATCH,
+    NULL, // next_capi
+    
+    notify_capi_toNotifier,
+
+    notify_capi_retainNotifier,
+    notify_capi_releaseNotifier,
+
+    notify_capi_notify
+};
+
+/* ============================================================================================ */
+
 static const luaL_Reg WorldMethods[] = 
 {
     { "setDefaultBackend",  World_setDefaultBackend  },
@@ -967,15 +1032,18 @@ static const luaL_Reg ModuleFunctions[] =
 };
 
 static void setupWorldMeta(lua_State* L)
-{
-    lua_pushstring(L, LPUGL_WORLD_CLASS_NAME);
-    lua_setfield(L, -2, "__metatable");
+{                                                       /* -> meta */
+    lua_pushstring(L, LPUGL_WORLD_CLASS_NAME);          /* -> meta, className */
+    lua_setfield(L, -2, "__metatable");                 /* -> meta */
 
-    luaL_setfuncs(L, WorldMetaMethods, 0);
+    luaL_setfuncs(L, WorldMetaMethods, 0);              /* -> meta */
     
-    lua_newtable(L);  /* BufferClass */
-        luaL_setfuncs(L, WorldMethods, 0);
-    lua_setfield (L, -2, "__index");
+    lua_newtable(L);  /* BufferClass */                 /* -> meta, BufferClass */
+    luaL_setfuncs(L, WorldMethods, 0);                  /* -> meta, BufferClass */
+    lua_setfield (L, -2, "__index");                    /* -> meta */
+    
+    lua_pushlightuserdata(L, (void*)&notify_capi_impl); /* -> meta, capi */
+    lua_setfield(L, -2, "_capi_notify");                /* -> meta */
 }
 
 
