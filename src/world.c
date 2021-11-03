@@ -570,7 +570,7 @@ static int World_toString(lua_State* L)
 static int World_id(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
-    if (!udata->world) {
+    if (!udata->world || !udata->world->puglWorld) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }    
     lua_pushinteger(L, udata->id);
@@ -691,8 +691,15 @@ static int World_hasViews(lua_State* L)
 
 static int World_isClosed(lua_State* L)
 {
-    WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
-    lua_pushboolean(L, udata->world == NULL);
+    WorldUserData* udata  = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
+    LpuglWorld*    world  = udata->world;
+    bool           closed;
+    if (world) {
+        closed = (world->puglWorld == NULL);
+    } else {
+        closed = true;
+    }
+    lua_pushboolean(L, closed);
     return 1;
 }
 
@@ -841,25 +848,28 @@ static int World_setNextProcessTime(lua_State* L)
 
 /* ============================================================================================ */
 
-static void awakeWorld(LpuglWorld* world)
+static int awakeWorld(LpuglWorld* world)
 {
+    int rc = 0;
     async_lock_acquire(&world->lock);
-        if (world->puglWorld && atomic_set_if_equal(&world->awakeSent, 0, 1)) {
-            puglAwake(world->puglWorld);
+        if (world->puglWorld) {
+            if (atomic_set_if_equal(&world->awakeSent, 0, 1)) {
+                puglAwake(world->puglWorld);
+            }
+        } else {
+            rc = 1; // world closed
         }
-    async_lock_release(&world->lock);    
+    async_lock_release(&world->lock);
+    return rc;
 }
 
 static int World_awake(lua_State* L)
 {
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
-    LpuglWorld* world = udata->world;
- 
-    if (!world) {
-        return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
-    }    
-    awakeWorld(world);
-    return 0;
+    LpuglWorld*    world = udata->world;
+    bool wasNotified = (world != NULL) && (awakeWorld(world) == 0);
+    lua_pushboolean(L, wasNotified);
+    return 1;
 }
 
 /* ============================================================================================ */
@@ -869,7 +879,7 @@ static int World_getTime(lua_State* L)
     WorldUserData* udata = luaL_checkudata(L, 1, LPUGL_WORLD_CLASS_NAME);
     LpuglWorld* world = udata->world;
  
-    if (!world) {
+    if (!world || !world->puglWorld) {
         return lpugl_ERROR_ILLEGAL_STATE(L, "closed");
     }    
     lua_pushnumber(L, puglGetTime(world->puglWorld));
@@ -967,10 +977,10 @@ static void notify_capi_releaseNotifier(notify_notifier* n)
     }
 }
 
-static void notify_capi_notify(notify_notifier* n)
+static int notify_capi_notify(notify_notifier* n, notifier_error_handler eh, void* ehdata)
 {
     LpuglWorld* world = (LpuglWorld*)n;
-    awakeWorld(world);
+    return awakeWorld(world);
 }
 
 static const notify_capi notify_capi_impl =
@@ -1038,8 +1048,8 @@ static void setupWorldMeta(lua_State* L)
 
     luaL_setfuncs(L, WorldMetaMethods, 0);              /* -> meta */
     
-    lua_newtable(L);  /* BufferClass */                 /* -> meta, BufferClass */
-    luaL_setfuncs(L, WorldMethods, 0);                  /* -> meta, BufferClass */
+    lua_newtable(L);  /* WorldClass */                  /* -> meta, WorldClass */
+    luaL_setfuncs(L, WorldMethods, 0);                  /* -> meta, WorldClass */
     lua_setfield (L, -2, "__index");                    /* -> meta */
     
     lua_pushlightuserdata(L, (void*)&notify_capi_impl); /* -> meta, capi */
