@@ -83,6 +83,7 @@ struct PuglInternalsImpl {
   bool         incrClipboardRequest;
   bool         displayed;
   bool         posRequested;
+  bool         hadConfigure;
 };
 
 PUGL_API_PRIVATE

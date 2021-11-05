@@ -1443,6 +1443,19 @@ puglDispatchX11Events(PuglWorld* world)
     PuglEvent event = translateEvent(view, xevent);
 
     if (event.type == PUGL_EXPOSE) {
+      if (!view->impl->hadConfigure) {
+        // simulate missing configure for xvfb
+        view->impl->pendingConfigure.configure.type   = PUGL_CONFIGURE;
+        view->impl->pendingConfigure.configure.x      = view->reqX;
+        view->impl->pendingConfigure.configure.y      = view->reqY;
+        view->impl->pendingConfigure.configure.width  = view->reqWidth;
+        view->impl->pendingConfigure.configure.height = view->reqHeight;
+        view->frame.x                = event.configure.x;
+        view->frame.y                = event.configure.y;
+        view->frame.width            = event.configure.width;
+        view->frame.height           = event.configure.height;
+        view->impl->hadConfigure = true;
+      }
       addPendingExpose(view, &event.expose);
     } else if (event.type == PUGL_CONFIGURE) {
       // Expand configure event to be dispatched after loop
