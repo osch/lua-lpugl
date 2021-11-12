@@ -1,3 +1,5 @@
+#define NOTIFY_CAPI_IMPLEMENT_SET_CAPI 1
+
 #include "base.h"
 
 #include "lpugl.h"
@@ -1051,9 +1053,8 @@ static void setupWorldMeta(lua_State* L)
     lua_newtable(L);  /* WorldClass */                  /* -> meta, WorldClass */
     luaL_setfuncs(L, WorldMethods, 0);                  /* -> meta, WorldClass */
     lua_setfield (L, -2, "__index");                    /* -> meta */
-    
-    lua_pushlightuserdata(L, (void*)&notify_capi_impl); /* -> meta, capi */
-    lua_setfield(L, -2, "_capi_notify");                /* -> meta */
+
+    notify_set_capi(L, -1, &notify_capi_impl);          /* -> meta */  
 }
 
 

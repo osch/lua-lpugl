@@ -1,9 +1,10 @@
 #ifndef NOTIFY_CAPI_H
 #define NOTIFY_CAPI_H
 
-#define NOTIFY_CAPI_VERSION_MAJOR 0
-#define NOTIFY_CAPI_VERSION_MINOR 1
-#define NOTIFY_CAPI_VERSION_PATCH 0
+#define NOTIFY_CAPI_ID_STRING     "_capi_notify"
+#define NOTIFY_CAPI_VERSION_MAJOR -1
+#define NOTIFY_CAPI_VERSION_MINOR  1
+#define NOTIFY_CAPI_VERSION_PATCH  0
 
 typedef struct notify_notifier notify_notifier;
 typedef struct notify_capi     notify_capi;
@@ -73,17 +74,35 @@ struct notify_capi
     /**
      * Calls the notify method of the given notifier object.
      * Must be thread safe.
-     * Returns 0 on success otherwise an error code != 0. 
-     * Should return 1 if the notifier should not be called again.
-     * The caller is expected to release the notifier object 
-     * in this case.
-     * All other error codes are implementation specific.
      *
      * eh:     error handling function, may be NULL
      * ehdata: additional data that is given to error handling function.
+     
+     * Returns 0 - on success otherwise an error code != 0. 
+     *         1 - if notifier is closed. The caller is expected to release the notifier.
+     *             Subsequent calls will always result this return code again.
+     * All other error codes are implementation specific.
      */
     int (*notify)(notify_notifier* n, notifier_error_handler eh, void* ehdata);
 };
+
+#if NOTIFY_CAPI_IMPLEMENT_SET_CAPI
+/**
+ * Sets the Notify C API into the metatable at the given index.
+ * 
+ * index: index of the table that is be used as metatable for objects 
+ *        that are associated to the given capi.
+ */
+static int notify_set_capi(lua_State* L, int index, const notify_capi* capi)
+{
+    lua_pushlstring(L, NOTIFY_CAPI_ID_STRING, strlen(NOTIFY_CAPI_ID_STRING));             /* -> key */
+    void** udata = lua_newuserdata(L, sizeof(void*) + strlen(NOTIFY_CAPI_ID_STRING) + 1); /* -> key, value */
+    *udata = (void*)capi;
+    strcpy((char*)(udata + 1), NOTIFY_CAPI_ID_STRING);    /* -> key, value */
+    lua_rawset(L, (index < 0) ? (index - 2) : index);     /* -> */
+    return 0;
+}
+#endif /* NOTIFY_CAPI_IMPLEMENT_SET_CAPI */
 
 #if NOTIFY_CAPI_IMPLEMENT_GET_CAPI
 /**
@@ -91,22 +110,30 @@ struct notify_capi
  */
 static const notify_capi* notify_get_capi(lua_State* L, int index, int* versionError)
 {
-    if (luaL_getmetafield(L, index, "_capi_notify") != LUA_TNIL) { /* -> _capi */
-        const notify_capi* capi = lua_touserdata(L, -1);           /* -> _capi */
-        while (capi) {
-            if (   capi->version_major == NOTIFY_CAPI_VERSION_MAJOR
-                && capi->version_minor >= NOTIFY_CAPI_VERSION_MINOR)
-            {                                                      /* -> _capi */
-                lua_pop(L, 1);                                     /* -> */
-                return capi;
+    if (luaL_getmetafield(L, index, NOTIFY_CAPI_ID_STRING) == LUA_TUSERDATA) /* -> _capi */
+    {
+        void** udata = lua_touserdata(L, -1);                                /* -> _capi */
+
+        if (   (lua_rawlen(L, -1) >= sizeof(void*) + strlen(NOTIFY_CAPI_ID_STRING) + 1)
+            && (memcmp((char*)(udata + 1), NOTIFY_CAPI_ID_STRING, 
+                       strlen(NOTIFY_CAPI_ID_STRING) + 1) == 0))
+        {
+            const notify_capi* capi = *udata;                                /* -> _capi */
+            while (capi) {
+                if (   capi->version_major == NOTIFY_CAPI_VERSION_MAJOR
+                    && capi->version_minor >= NOTIFY_CAPI_VERSION_MINOR)
+                {                                                            /* -> _capi */
+                    lua_pop(L, 1);                                           /* -> */
+                    return capi;
+                }
+                capi = capi->next_capi;
             }
-            capi = capi->next_capi;
-        }
-        if (versionError) {
-            *versionError = 1;
-        }                                                           /* -> _capi */
-        lua_pop(L, 1);                                              /* -> */
-    }                                                               /* -> */
+            if (versionError) {
+                *versionError = 1;
+            }
+        }                                                                    /* -> _capi */
+        lua_pop(L, 1);                                                       /* -> */
+    }                                                                        /* -> */
     return NULL;
 }
 #endif /* NOTIFY_CAPI_IMPLEMENT_GET_CAPI */
