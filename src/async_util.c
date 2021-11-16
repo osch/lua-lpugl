@@ -119,7 +119,7 @@ void lpugl_async_mutex_wait(Mutex* mutex)
 
 #elif defined(LPUGL_ASYNC_USE_STDTHREAD)
     int rc = cnd_wait(&mutex->condition, &mutex->mutex);
-    if (rc != 0) { async_util_abort(rc, __LINE__); }
+    if (rc != thrd_success) { async_util_abort(rc, __LINE__); }
 
 #endif
 }
