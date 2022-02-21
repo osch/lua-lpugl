@@ -421,12 +421,13 @@ TODO
   This functions returns `true` if the world is open and the awake could be signalled,
   `false` otherwise.
   
-  An awake could also be signalled from any non Lua related C code via the *Notify C API*, 
+  An awake could also be signalled from any non Lua related C code via the [Notify C API], 
   see [src/notify_capi.h](../src/notify_capi.h),
   i.e. the world object has an associated meta table entry *_capi_notify* delivered by
   the C API function *notify_get_capi()* and the associated C API function *toNotifier()* returns
   a valid pointer for a given LPugl world object. See [example10.lua](../example/example10.lua)
   
+  [Notify C API]:   https://github.com/lua-capis/lua-notify-capi
 
 <!-- ---------------------------------------------------------------------------------------- -->
 

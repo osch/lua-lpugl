@@ -9,6 +9,10 @@
 typedef struct notify_notifier notify_notifier;
 typedef struct notify_capi     notify_capi;
 
+#ifndef NOTIFY_CAPI_IMPLEMENT_SET_CAPI
+#  define NOTIFY_CAPI_IMPLEMENT_SET_CAPI 0
+#endif
+
 #ifndef NOTIFY_CAPI_IMPLEMENT_GET_CAPI
 #  define NOTIFY_CAPI_IMPLEMENT_GET_CAPI 0
 #endif
@@ -107,14 +111,19 @@ static int notify_set_capi(lua_State* L, int index, const notify_capi* capi)
 #if NOTIFY_CAPI_IMPLEMENT_GET_CAPI
 /**
  * Gives the associated Notify C API for the object at the given stack index.
+ * Returns NULL, if the object at the given stack index does not have an 
+ * associated Notify C API or only has a Notify C API with incompatible version
+ * number. If errorReason is not NULL it receives the error reason in this case:
+ * 1 for incompatible version nummber and 2 for no associated C API at all.
  */
-static const notify_capi* notify_get_capi(lua_State* L, int index, int* versionError)
+static const notify_capi* notify_get_capi(lua_State* L, int index, int* errorReason)
 {
-    if (luaL_getmetafield(L, index, NOTIFY_CAPI_ID_STRING) == LUA_TUSERDATA) /* -> _capi */
+    if (luaL_getmetafield(L, index, NOTIFY_CAPI_ID_STRING) != LUA_TNIL)      /* -> _capi */
     {
         void** udata = lua_touserdata(L, -1);                                /* -> _capi */
 
-        if (   (lua_rawlen(L, -1) >= sizeof(void*) + strlen(NOTIFY_CAPI_ID_STRING) + 1)
+        if (   udata
+            && (lua_rawlen(L, -1) >= sizeof(void*) + strlen(NOTIFY_CAPI_ID_STRING) + 1)
             && (memcmp((char*)(udata + 1), NOTIFY_CAPI_ID_STRING, 
                        strlen(NOTIFY_CAPI_ID_STRING) + 1) == 0))
         {
@@ -128,12 +137,20 @@ static const notify_capi* notify_get_capi(lua_State* L, int index, int* versionE
                 }
                 capi = capi->next_capi;
             }
-            if (versionError) {
-                *versionError = 1;
+            if (errorReason) {
+                *errorReason = 1;
             }
-        }                                                                    /* -> _capi */
+        } else {                                                             /* -> _capi */
+            if (errorReason) {
+                *errorReason = 2;
+            }
+        }
         lua_pop(L, 1);                                                       /* -> */
-    }                                                                        /* -> */
+    } else {                                                                 /* -> */
+        if (errorReason) {
+            *errorReason = 2;
+        }
+    }
     return NULL;
 }
 #endif /* NOTIFY_CAPI_IMPLEMENT_GET_CAPI */

@@ -64,7 +64,7 @@
 
    * [`example10.lua`](./example10.lua)
 
-     This examples demonstrates the usage of the *Notify C API* in a multithreading scenario.
+     This examples demonstrates the usage of the [Notify C API] in a multithreading scenario.
      
      LPugl world objects implement the *Notify C API*, see [src/notify_capi.h](../src/notify_capi.h),
      i.e. the world object has an an associated meta table entry *_capi_notify* delivered by
@@ -77,6 +77,8 @@
      
      This is done by connecting the LPugl world object as a notifier object to the mtmsg buffer 
      object.
+
+     [Notify C API]:   https://github.com/lua-capis/lua-notify-capi
 
      ![Screenshot example10](./screenshot10.png)
 
