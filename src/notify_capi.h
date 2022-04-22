@@ -2,9 +2,9 @@
 #define NOTIFY_CAPI_H
 
 #define NOTIFY_CAPI_ID_STRING     "_capi_notify"
-#define NOTIFY_CAPI_VERSION_MAJOR -1
-#define NOTIFY_CAPI_VERSION_MINOR  1
-#define NOTIFY_CAPI_VERSION_PATCH  0
+#define NOTIFY_CAPI_VERSION_MAJOR  0
+#define NOTIFY_CAPI_VERSION_MINOR  0
+#define NOTIFY_CAPI_VERSION_PATCH  1
 
 typedef struct notify_notifier notify_notifier;
 typedef struct notify_capi     notify_capi;
