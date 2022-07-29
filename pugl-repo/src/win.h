@@ -53,6 +53,7 @@ struct PuglInternalsImpl {
   bool         flashing;
   bool         mouseTracked;
   bool         hasBeginPaint;
+  bool         posRequested;
 };
 
 static wchar_t*
@@ -163,12 +164,19 @@ puglWinCreateWindow(PuglView* const   view,
     free(titleW);
     return PUGL_FAILURE;
   }
+  int x = CW_USEDEFAULT;
+  int y = CW_USEDEFAULT;
+  if (view->impl->posRequested) {
+    x = view->reqX;
+    y = view->reqY;
+    view->impl->posRequested = false;
+  }
   if (!(*hwnd = CreateWindowExW(winExFlags,
                                 className,
                                 titleW,
                                 winFlags,
-                                CW_USEDEFAULT,
-                                CW_USEDEFAULT,
+                                x,
+                                y,
                                 wr.right - wr.left,
                                 wr.bottom - wr.top,
                                 parent,

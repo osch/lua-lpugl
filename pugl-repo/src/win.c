@@ -1392,6 +1392,8 @@ puglSetFrame(PuglView* view, const PuglRect frame)
   view->reqWidth  = (int)frame.width;
   view->reqHeight = (int)frame.height;
 
+  view->impl->posRequested = true;
+
   if (view->impl->hwnd) {
     RECT rect = {(long)frame.x,
                  (long)frame.y,

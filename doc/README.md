@@ -268,6 +268,15 @@ TODO
   * <a id="newView_size">**`size = {width, height}`**</a> - optional table containing
     width and height as first and second table entry. Sets the initial size for the new view.
     The size may afterwards be changed using [*view:setSize()*](#view_setSize).
+    This parameter cannot be combined with [*frame*](#newView_frame).
+    
+  * <a id="newView_frame">**`frame = {x, y, width, height}`**</a> - optional table containing
+    position and size as table entries. Sets the initial position and size for the new view.
+    The position and size may afterwards be changed using [*view:setFrame()*](#view_setFrame).
+    This parameter cannot be combined with [*size*](#newView_size). It is not recommended to 
+    set the initial position for normal top level windows, let instead the system window 
+    manager choose the initial position of the new top level window by setting only the initial 
+    size using the parameter [*size*](#newView_size).
     
   * <a id="newView_resizable">**`resizable = flag`**</a> - *true* if the created window should be 
     resizable by the user.

@@ -627,7 +627,7 @@ puglShow(PuglView* view)
 
   if (!view->impl->displayed) {
     view->impl->displayed = true;
-    if (view->impl->posRequested && view->transientParent) {
+    if (view->impl->posRequested) {
       // Position popups and transients to desired position.
       // Additional XMoveResizeWindow after XMapRaised was
       // at least necessary for KDE desktop.

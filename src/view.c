@@ -494,6 +494,7 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
     bool isResizable =  false;
     bool dontMergeRects = false;
     bool useDoubleBuffer = false;
+    bool hasSize = false;
     {
         lua_pushnil(L);                 /* -> udata, nil */
         while (lua_next(L, initArg)) {  /* -> udata, key, value */
@@ -537,6 +538,10 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 {
                     return luaL_argerror(L, initArg, "invalid 'size' value");
                 }
+                if (hasSize) {
+                    return luaL_argerror(L, initArg, "only one parameter 'size' or 'frame' is allowed");
+                }
+                hasSize = true;
                 int w = floor(lua_tonumber(L, -2) + 0.5);
                 int h = floor(lua_tonumber(L, -1) + 0.5);
                 lua_pop(L, 2);                                /* -> udata, key, value */
@@ -588,6 +593,11 @@ int lpugl_view_new(lua_State* L, LpuglWorld* world, int initArg, int viewLookup)
                 lua_Number h = lua_tonumber(L, -1);
                 lua_pop(L, 4);                                /* -> udata, key, value */
                 
+                if (hasSize) {
+                    return luaL_argerror(L, initArg, "only one parameter 'size' or 'frame' is allowed");
+                }
+                hasSize = true;
+
                 PuglRect rect;
                 rect.x      = floor(x + 0.5);
                 rect.y      = floor(y + 0.5);
