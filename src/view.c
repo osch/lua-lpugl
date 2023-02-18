@@ -105,7 +105,7 @@ static const char* puglKeyToName(PuglKey key)
         case PUGL_KEY_KP_MULTIPLY:  return "KP_Multiply";
         case PUGL_KEY_KP_ADD:       return "KP_Add";
         case PUGL_KEY_KP_SUBTRACT:  return "KP_Subtract";
-        case PUGL_KEY_KP_DIVIDE:    return "KP_divide";
+        case PUGL_KEY_KP_DIVIDE:    return "KP_Divide";
         
         case PUGL_KEY_KP_0:         return "KP_0";
         case PUGL_KEY_KP_1:         return "KP_1";
