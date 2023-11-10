@@ -103,8 +103,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 ##   Module Functions
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_newWorld">**`  lpugl.newWorld(name)
-  `**</a>
+* <span id="lpugl_newWorld">**`lpugl.newWorld(name)
+  `**</span>
   
   Creates a new Pugl world object with the given name. A world object is used to create
   windows and to drive the event loop. Normally you would only create one world object 
@@ -119,8 +119,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_world">**`     lpugl.world(id)
-  `**</a>
+* <span id="lpugl_world">**`lpugl.world(id)
+  `**</span>
   
   Creates a lua object for restricted access to an existing world object that has
   been created with *lpugl.newWorld()*, *lpugl_cairo.newWorld()* or *lpugl_opengl.newWorld()*.
@@ -135,8 +135,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_btest">**`     lpugl.btest(...)
-  `**</a>
+* <span id="lpugl_btest">**`lpugl.btest(...)
+  `**</span>
   
   Returns a boolean signaling whether the bitwise AND of its operands is different from zero. 
   
@@ -144,8 +144,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_cairo_newWorld">**`       lpugl_cairo.newWorld(name)
-  `**</a>
+* <span id="lpugl_cairo_newWorld">**`lpugl_cairo.newWorld(name)
+  `**</span>
   
   This does the same as [*lpugl.newWorld()*](#lpugl_newWorld) but does
   also set a Cairo backend as default backend for the created world object.
@@ -153,8 +153,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_cairo_newBackend">**`     lpugl_cairo.newBackend(world)
-  `**</a>
+* <span id="lpugl_cairo_newBackend">**`lpugl_cairo.newBackend(world)
+  `**</span>
   
   Creates a new Cairo backend object for the given world.
   
@@ -163,8 +163,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_opengl_newWorld">**`      lpugl_opengl.newWorld(name)
-  `**</a>
+* <span id="lpugl_opengl_newWorld">**`lpugl_opengl.newWorld(name)
+  `**</span>
   
   This does the same as [*lpugl.newWorld()*](#lpugl_newWorld) but does
   also set an OpenGL backend as default backend for the created world object.
@@ -172,8 +172,8 @@ makes all symbols from the packages *lpugl* and *lpugl_cairo* visible under the 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_opengl_newBackend">**`    lpugl_opengl.newBackend(world)
-  `**</a>
+* <span id="lpugl_opengl_newBackend">**`lpugl_opengl.newBackend(world)
+  `**</span>
   
   Creates a new OpenGL backend object for the given world.
   
@@ -185,13 +185,13 @@ TODO
 ##   Module Constants
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="lpugl_platform">**`    lpugl.platform
-  `**</a>
+* <span id="lpugl_platform">**`lpugl.platform
+  `**</span>
   
   Platform information, contains the string `"X11"`, `"WIN"` or `"MAC"`. 
 
 
-* **<a id="lpugl_MOD_">Key modifier flags</a>**
+* **<span id="lpugl_MOD_">Key modifier flags</span>**
 
   The current key modifier state (e.g. as delivered in a [*BUTTON_PRESS*](#event_BUTTON_PRESS) event) 
   is an integer value where each key modifier is presented as a bit flag.
@@ -213,8 +213,8 @@ TODO
 ##   World Methods
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setDefaultBackend">**`    world:setDefaultBackend(backend)
-  `** </a>
+* <span id="world_setDefaultBackend">**`world:setDefaultBackend(backend)
+  `** </span>
   
   Sets the given backend as default backend. The default backend is used for
   all views that are created for this world if no backend is given when
@@ -224,15 +224,15 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_getDefaultBackend">**`    world:getDefaultBackend()
-  `**</a>
+* <span id="world_getDefaultBackend">**`world:getDefaultBackend()
+  `**</span>
   
   Returns the default backend that was set with [*world:setDefaultBackend()*](#world_setDefaultBackend).
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_id">**`                   world:id()
-  `**</a>
+* <span id="world_id">**`world:id()
+  `**</span>
 
   Returns the world objects's id as integer. This id is unique among all world objects
   for the whole process. 
@@ -242,7 +242,7 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_newView">**`              world:newView(initArgs)`**
+* <span id="world_newView">**`world:newView(initArgs)`**
 
   Creates a new view object. View objects can be top level windows or can be embedded in other
   views, depending on the parameters given in *initArgs*.
@@ -256,21 +256,21 @@ TODO
                  
   The parameter *initArgs* may contain the following parameters as key value pairs:
   
-  * <a id="newView_backend">**`backend = lpuglBackend`**</a> - backend object to be used for the 
+  * <span id="newView_backend">**`backend = lpuglBackend`**</span> - backend object to be used for the 
     created view. Can be omitted, if a default backend was set via 
     [*world:setDefaultBackend()*](#world_setDefaultBackend)
 
-  * <a id="newView_title">**`title = titleString`**</a> - optional string, initial title for the 
+  * <span id="newView_title">**`title = titleString`**</span> - optional string, initial title for the 
     created window. This title is displayed in the window title bar if the view is a top level 
     window (i.e. [*parent*](#newView_parent) and [*popupFor*](#newView_popupFor) are not given).
     The title may afterwards be changed using [*view:setTitle()*](#view_setTitle).
 
-  * <a id="newView_size">**`size = {width, height}`**</a> - optional table containing
+  * <span id="newView_size">**`size = {width, height}`**</span> - optional table containing
     width and height as first and second table entry. Sets the initial size for the new view.
     The size may afterwards be changed using [*view:setSize()*](#view_setSize).
     This parameter cannot be combined with [*frame*](#newView_frame).
     
-  * <a id="newView_frame">**`frame = {x, y, width, height}`**</a> - optional table containing
+  * <span id="newView_frame">**`frame = {x, y, width, height}`**</span> - optional table containing
     position and size as table entries. Sets the initial position and size for the new view.
     The position and size may afterwards be changed using [*view:setFrame()*](#view_setFrame).
     This parameter cannot be combined with [*size*](#newView_size). It is not recommended to 
@@ -278,10 +278,10 @@ TODO
     manager choose the initial position of the new top level window by setting only the initial 
     size using the parameter [*size*](#newView_size).
     
-  * <a id="newView_resizable">**`resizable = flag`**</a> - *true* if the created window should be 
+  * <span id="newView_resizable">**`resizable = flag`**</span> - *true* if the created window should be 
     resizable by the user.
 
-  * <a id="newView_parent">**`parent = view`**</a> - optional parent view. If given the created 
+  * <span id="newView_parent">**`parent = view`**</span> - optional parent view. If given the created 
     view is embedded into the parent view. Otherwise a top level window is created. This parameter 
     cannot be combined with [*popupFor*](#newView_popupFor) or [*transientFor*](#newView_transientFor).
     
@@ -290,24 +290,24 @@ TODO
     *lpugl.view* as a child view into a parent view that is not handled by *lpugl.world*. See
     also [*view:getNativeHandle()*](#view_getNativeHandle)
 
-  * <a id="newView_popupFor">**`popupFor = view`**</a>       - TODO - This parameter 
+  * <span id="newView_popupFor">**`popupFor = view`**</span>       - TODO - This parameter 
     cannot be combined with [*parent*](#newView_parent) or [*transientFor*](#newView_transientFor). 
 
-  * <a id="newView_transientFor">**`transientFor = view`**</a>   - TODO - This parameter 
+  * <span id="newView_transientFor">**`transientFor = view`**</span>   - TODO - This parameter 
     cannot be combined with [*parent*](#newView_parent) or [*popupFor*](#newView_popupFor).
 
-  * <a id="newView_dontMergeRects">**`dontMergeRects = flag`**</a> - if set to *true*, 
+  * <span id="newView_dontMergeRects">**`dontMergeRects = flag`**</span> - if set to *true*, 
     several [expose events](#event_EXPOSE) will be delivered for one exposure cycle. Otherwise
     all exposed rectangles in the current cycle will be merged to one larger rectangle that will 
     be delivered in one single exposure event.
 
-  * <a id="newView_useDoubleBuffer">**`useDoubleBuffer = flag`**</a> - *true* if the created window 
+  * <span id="newView_useDoubleBuffer">**`useDoubleBuffer = flag`**</span> - *true* if the created window 
     should use double buffering. This parameter has only effect for the OpenGL backend.
     If double buffering is set, partial redrawing is not guaranteed to work, i.e. in this case the
     function [view:postRedisplay()](#view_postRedisplay) should only be called without
     specifying a redraw rectangle.
 
-  * <a id="newView_eventFunc">**`eventFunc = func | {func, ...}`**</a>  - sets a function for 
+  * <span id="newView_eventFunc">**`eventFunc = func | {func, ...}`**</span>  - sets a function for 
     handling the view's  [event processing](#event-processing). The value for *eventFunc* may
     be a function or a table with it's first entry being the event handling function. The other
     entries with index > 1 in this table are context parameters that are given to the
@@ -331,15 +331,15 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_hasViews">**`             world:hasViews()
-  `**</a>
+* <span id="world_hasViews">**`world:hasViews()
+  `**</span>
   
   Returns *true* if there are views belonging to this world that have not been closed.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_update">**`               world:update(timeout)
-  `**</a>
+* <span id="world_update">**`world:update(timeout)
+  `**</span>
 
   Update by processing events from the window system.
 
@@ -357,8 +357,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setProcessFunc">**`          world:setProcessFunc(func)
-  `**</a>
+* <span id="world_setProcessFunc">**`world:setProcessFunc(func)
+  `**</span>
   
   Sets the world's process function. The process function is called in the main event loop after 
   the time has elapsed that was given in [*world:setNextProcessTime()*](#world_setNextProcessTime) 
@@ -396,8 +396,8 @@ TODO
                 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setNextProcessTime">**`          world:setNextProcessTime(seconds)
-  `**</a>
+* <span id="world_setNextProcessTime">**`world:setNextProcessTime(seconds)
+  `**</span>
   
   Sets the time duration after the world's process function is called that was set via
   [*world:setProcessFunc()*](#world_setProcessFunc).
@@ -411,8 +411,8 @@ TODO
                 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_awake">**`                world:awake()
-  `**</a>
+* <span id="world_awake">**`world:awake()
+  `**</span>
   
   Can be invoked from concurrently running threads to trigger the invocation of
   the world's process function that was set via [*world:setProcessFunc()*](#world_setProcessFunc) 
@@ -440,8 +440,8 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_getTime">**`              world:getTime()
-  `**</a>
+* <span id="world_getTime">**`world:getTime()
+  `**</span>
   
    Returns the time in seconds as float value.
 
@@ -452,8 +452,8 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setErrorFunc">**`         world:setErrorFunc(func)
-  `**</a>
+* <span id="world_setErrorFunc">**`world:setErrorFunc(func)
+  `**</span>
 
   Sets the world's error function. The error function is called when an error occurs while
   an event is dispatched or while the world's process functions is invoked. 
@@ -466,15 +466,15 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setLogLevel">**`          world:setLogLevel(logLevel)
-  `**</a>
+* <span id="world_setLogLevel">**`world:setLogLevel(logLevel)
+  `**</span>
   
   * *logLevel* - string, valid values: *"NONE"*, *"ERROR"*, *"WARNING"*, *"INFO"*, *"DEBUG"*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setLogFunc">**`           world:setLogFunc(func)
-  `**</a>
+* <span id="world_setLogFunc">**`world:setLogFunc(func)
+  `**</span>
   
   * *func* - log function, this function is invoked with arguments *logLevel*, *logMessage*
              for each log message that has a log level according to the log 
@@ -484,16 +484,16 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_setClipboard">**`         world:setClipboard(text)
-  `**</a>
+* <span id="world_setClipboard">**`world:setClipboard(text)
+  `**</span>
   
   Pastes the given text to the clipboard. On X11 the clipboard content is lost if the Pugl
   world is closed.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_hasClipboard">**`         world:hasClipboard()
-  `**</a>
+* <span id="world_hasClipboard">**`world:hasClipboard()
+  `**</span>
   
   Returns `true` if the clipboard is owned by this Pugl world. This returns always `false`
   on Win and Mac platform. On X11 the clipboard content is lost if the clipboard owning
@@ -501,15 +501,15 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_getScreenScale">**`         world:getScreenScale()
-  `**</a>
+* <span id="world_getScreenScale">**`world:getScreenScale()
+  `**</span>
   
   Returns the screen scale factor for the default screen.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_close">**`                world:close()
-  `**</a>
+* <span id="world_close">**`world:close()
+  `**</span>
   
   Closes the Pugl world. Closes also all views belonging to this Pugl world.
   This method is also invoked if the last Lua reference to the Pugl world
@@ -517,8 +517,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="world_isClosed">**`             world:isClosed()
-  `**</a>
+* <span id="world_isClosed">**`world:isClosed()
+  `**</span>
   
   Returns `true` if the Pugl world was closed.
   
@@ -530,29 +530,29 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_show">**`                 view:show()
-  `**</a>
+* <span id="view_show">**`view:show()
+  `**</span>
   
   Makes the view visible. A new created view is invisible by default.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_hide">**`                 view:hide()
-  `**</a>
+* <span id="view_hide">**`view:hide()
+  `**</span>
   
   Makes the view invisible.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_isVisible">**`            view:isVisible()
-  `**</a>
+* <span id="view_isVisible">**`view:isVisible()
+  `**</span>
   
   Returns `true` if the view is visible.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setTitle">**`              view:setTitle(title)
-  `**</a>
+* <span id="view_setTitle">**`view:setTitle(title)
+  `**</span>
   
   Sets the title of the window. 
   
@@ -562,36 +562,36 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setMinSize">**`           view:setMinSize(width, height)
-  `**</a>
+* <span id="view_setMinSize">**`view:setMinSize(width, height)
+  `**</span>
   
   Sets the minimum size of the view.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setMaxSize">**`           view:setMaxSize(width, height)
-  `**</a>
+* <span id="view_setMaxSize">**`view:setMaxSize(width, height)
+  `**</span>
   
   Sets the maximum size of the view.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setSize">**`              view:setSize(width, height)
-  `**</a>
+* <span id="view_setSize">**`view:setSize(width, height)
+  `**</span>
   
   Sets the size of the view.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getSize">**`              view:getSize()
-  `**</a>
+* <span id="view_getSize">**`view:getSize()
+  `**</span>
   
   Gets the size of the view. Returns *width*, *height*.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setFrame">**`             view:setFrame(x, y, width, height)
-  `**</a>
+* <span id="view_setFrame">**`view:setFrame(x, y, width, height)
+  `**</span>
   
   Sets the position and size of the view.
   
@@ -602,8 +602,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getFrame">**`             view:getFrame()
-  `**</a>
+* <span id="view_getFrame">**`view:getFrame()
+  `**</span>
   
   Gets the position and size of the view.  Returns *x*, *y*, *width*, *height*. 
   
@@ -614,22 +614,22 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_hasFocus">**`             view:hasFocus()
-  `**</a>
+* <span id="view_hasFocus">**`view:hasFocus()
+  `**</span>
   
   Returns `true` if the view has keyboard input focus. 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_grabFocus">**`            view:grabFocus()
-  `**</a>
+* <span id="view_grabFocus">**`view:grabFocus()
+  `**</span>
   
   Requests keyboard input focus.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getLayoutContext">**`     view:getLayoutContext()
-  `**</a>
+* <span id="view_getLayoutContext">**`view:getLayoutContext()
+  `**</span>
   
   Only for Cairo backend: Gets a Cairo context that can be used for rendering off screen 
   surfaces or for layout purposes, e.g. obtaining text extents. This context may
@@ -637,8 +637,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getDrawContext">**`       view:getDrawContext()
-  `**</a>
+* <span id="view_getDrawContext">**`view:getDrawContext()
+  `**</span>
   
   Only for Cairo backend: Gets the Cairo draw context. This should only be used while
   [processing exposure events](#event_EXPOSE). The Cairo draw context has already been set up with 
@@ -646,15 +646,15 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getScreenScale">**`       view:getScreenScale()
-  `**</a>
+* <span id="view_getScreenScale">**`view:getScreenScale()
+  `**</span>
   
   Returns the screen scale factor for the view.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_postRedisplay">**`        view:postRedisplay([x, y, width, height])
-  `**</a>
+* <span id="view_postRedisplay">**`view:postRedisplay([x, y, width, height])
+  `**</span>
   
   Request a redisplay for the entire view or the given rectangle within the view.
   
@@ -669,8 +669,8 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_setCursor">**`        view:setCursor(type)
-  `**</a>
+* <span id="view_setCursor">**`view:setCursor(type)
+  `**</span>
   
   Sets the appearance of the mouse cursor.
   
@@ -688,15 +688,15 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_requestClipboard">**`     view:requestClipboard()
-  `**</a>
+* <span id="view_requestClipboard">**`view:requestClipboard()
+  `**</span>
   
   TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_getNativeHandle">**`      view:getNativeHandle()
-  `**</a>
+* <span id="view_getNativeHandle">**`view:getNativeHandle()
+  `**</span>
   
   Gives the native handle for the view as a [light userdata]. 
   
@@ -707,15 +707,15 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_close">**`                view:close()
-  `**</a>
+* <span id="view_close">**`view:close()
+  `**</span>
   
   Closes the view. Once a view is closed, it cannot be re-opened. 
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="view_isClosed">**`             view:isClosed()
-  `**</a>
+* <span id="view_isClosed">**`view:isClosed()
+  `**</span>
   
   Returns `true` if the Pugl view was closed.
   
@@ -726,8 +726,8 @@ TODO
 ##   Backend Methods
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="cairoBackend_getLayoutContext">**`         cairoBackend:getLayoutContext()
-  `**</a>
+* <span id="cairoBackend_getLayoutContext">**`cairoBackend:getLayoutContext()
+  `**</span>
   
   Gets a Cairo context that can be used for rendering off screen surfaces or for
   layout purposes, e.g. obtaining text extents. This context may be used
@@ -750,8 +750,8 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_CREATE">**`            "CREATE"
-  `**</a>
+* <span id="event_CREATE">**`"CREATE"
+  `**</span>
 
   View create event.
 
@@ -761,8 +761,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_CONFIGURE">**`         "CONFIGURE", x, y, width, height
-  `**</a>
+* <span id="event_CONFIGURE">**`"CONFIGURE", x, y, width, height
+  `**</span>
 
   View resize or move event.
 
@@ -779,8 +779,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_MAP">**`               "MAP"
-  `**</a>
+* <span id="event_MAP">**`"MAP"
+  `**</span>
 
   View show event.
 
@@ -788,8 +788,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_UNMAP">**`             "UNMAP"
-  `**</a>
+* <span id="event_UNMAP">**`"UNMAP"
+  `**</span>
 
   View hide event.
 
@@ -798,8 +798,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_EXPOSE">**`            "EXPOSE", x, y, width, height, count, isFirst
-  `**</a>
+* <span id="event_EXPOSE">**`"EXPOSE", x, y, width, height, count, isFirst
+  `**</span>
 
   * *x*, *y*, *width*, *height* - position and size of the rectangle that should be redisplayed
                                   in view relative coordinates.
@@ -818,8 +818,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_BUTTON_PRESS">**`      "BUTTON_PRESS", x, y, button, state
-  `**</a>
+* <span id="event_BUTTON_PRESS">**`"BUTTON_PRESS", x, y, button, state
+  `**</span>
 
   Mouse button press event.
   
@@ -829,8 +829,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_BUTTON_RELEASE">**`    "BUTTON_RELEASE", x, y, button, state
-  `**</a>
+* <span id="event_BUTTON_RELEASE">**`"BUTTON_RELEASE", x, y, button, state
+  `**</span>
 
   Mouse button release event.
   
@@ -840,22 +840,22 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_KEY_PRESS">**`         "KEY_PRESS", keyName, state, text
-  `**</a>
+* <span id="event_KEY_PRESS">**`"KEY_PRESS", keyName, state, text
+  `**</span>
 
   TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_KEY_RELEASE">**`       "KEY_RELEASE", keyName, state, text
-  `**</a>
+* <span id="event_KEY_RELEASE">**`"KEY_RELEASE", keyName, state, text
+  `**</span>
 
   TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_POINTER_IN">**`        "POINTER_IN", x, y
-  `**</a>
+* <span id="event_POINTER_IN">**`"POINTER_IN", x, y
+  `**</span>
 
   Mouse pointer enter event. This event is sent when the pointer enters the view.
 
@@ -864,8 +864,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_POINTER_OUT">**`       "POINTER_OUT", x, y
-  `**</a>
+* <span id="event_POINTER_OUT">**`"POINTER_OUT", x, y
+  `**</span>
 
   Mouse pointer leave event. This event is sent when the pointer leaves the view.
   
@@ -873,8 +873,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_MOTION">**`            "MOTION", x, y
-  `**</a>
+* <span id="event_MOTION">**`"MOTION", x, y
+  `**</span>
 
   Mouse pointer motion event.
 
@@ -882,8 +882,8 @@ TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_SCROLL">**`            "SCROLL", dx, dy
-  `**</a>
+* <span id="event_SCROLL">**`"SCROLL", dx, dy
+  `**</span>
 
   Scroll event.
 
@@ -901,22 +901,22 @@ TODO
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_FOCUS_IN">**`          "FOCUS_IN"
-  `**</a>
+* <span id="event_FOCUS_IN">**`"FOCUS_IN"
+  `**</span>
 
   TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_FOCUS_OUT">**`         "FOCUS_OUT"
-  `**</a>
+* <span id="event_FOCUS_OUT">**`"FOCUS_OUT"
+  `**</span>
 
   TODO
   
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="event_CLOSE">**`             "CLOSE"
-  `**</a>
+* <span id="event_CLOSE">**`"CLOSE"
+  `**</span>
   
   User requests to close the view. The view mustn't close. Instead the view can 
   initiate user interactions, e.g. for saving open documents or cancelling the close
