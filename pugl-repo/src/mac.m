@@ -433,7 +433,8 @@ rescheduleProcessTimer(PuglWorld* world)
 - (void)handleFocusIn: (NSNotification*)notification
 {
   if (puglview) {
-    PuglEvent ev  = {{PUGL_FOCUS_IN, 0}};
+    PuglEvent ev; // = {{PUGL_FOCUS_IN, 0}}; <-- this caused problems with gcc 15.2.1
+    puglClearEventStruct(&event, PUGL_FOCUS_IN);
     ev.focus.mode = PUGL_CROSSING_NORMAL;
     puglDispatchEvent(puglview, &ev);
   }
@@ -441,7 +442,8 @@ rescheduleProcessTimer(PuglWorld* world)
 - (void)handleFocusOut: (NSNotification*)notification
 {
   if (puglview) {
-    PuglEvent ev  = {{PUGL_FOCUS_OUT, 0}};
+    PuglEvent ev; // = {{PUGL_FOCUS_OUT, 0}}; <-- this caused problems with gcc 15.2.1
+    puglClearEventStruct(&event, PUGL_FOCUS_OUT);
     ev.focus.mode = PUGL_CROSSING_NORMAL;
     puglDispatchEvent(puglview, &ev);
   }

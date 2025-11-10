@@ -491,7 +491,8 @@ puglDispatchSimpleEvent(PuglView* view, const PuglEventType type)
          type == PUGL_UNMAP || type == PUGL_UPDATE || type == PUGL_CLOSE ||
          type == PUGL_LOOP_ENTER || type == PUGL_LOOP_LEAVE);
 
-  PuglEvent event = {{type, 0}};
+  PuglEvent event; // = {{type, 0}};; <-- this caused problems with gcc 15.2.1
+  puglClearEventStruct(&event, type);
   puglDispatchEvent(view, &event);
 }
 

@@ -939,7 +939,9 @@ translateEvent(PuglView* view, XEvent xevent)
 {
   const PuglX11Atoms* atoms = &view->world->impl->atoms;
 
-  PuglEvent event = {{PUGL_NOTHING, 0}};
+  PuglEvent event; // = {{PUGL_NOTHING, 0}}; <-- this caused problems with gcc 15.2.1
+  puglClearEventStruct(&event, PUGL_NOTHING);
+
   event.any.flags = xevent.xany.send_event ? PUGL_IS_SEND_EVENT : 0;
 
   switch (xevent.type) {

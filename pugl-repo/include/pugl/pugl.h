@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifndef PUGL_API
 #  if defined(_WIN32) && !defined(PUGL_STATIC) && defined(PUGL_INTERNAL)
@@ -588,6 +589,13 @@ typedef union {
   PuglEventClient    client;    ///< #PUGL_CLIENT
   PuglEventReceived  received;  ///< #PUGL_DATA_RECEIVED
 } PuglEvent;
+
+
+static inline void puglClearEventStruct(PuglEvent* e, PuglEventType type)
+{
+    memset(e, 0, sizeof(PuglEvent));
+    e->any.type = type;
+}
 
 /**
    @}

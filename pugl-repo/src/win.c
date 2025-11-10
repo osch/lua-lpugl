@@ -806,11 +806,13 @@ constrainAspect(const PuglView* const view,
 static LRESULT
 handleMessage(PuglView* view, UINT message, WPARAM wParam, LPARAM lParam)
 {
-  PuglEvent   event     = {{PUGL_NOTHING, 0}};
+  PuglEvent   event; // = {{PUGL_NOTHING, 0}}; <-- this caused problems with gcc 15.2.1
   RECT        rect      = {0, 0, 0, 0};
   POINT       pt        = {0, 0};
   MINMAXINFO* mmi       = NULL;
   void*       dummy_ptr = NULL;
+
+  puglClearEventStruct(&event, PUGL_NOTHING);
 
   if (InSendMessageEx(dummy_ptr)) {
     event.any.flags |= PUGL_IS_SEND_EVENT;
