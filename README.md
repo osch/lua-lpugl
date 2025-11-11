@@ -77,10 +77,51 @@ application and also in the same window by embedding different view objects.
     view:show()
     
     while world:hasViews() do
+        view:postRedisplay()
         world:update()
     end
     ```
+## Second Example
 
+* Simple example for using the OpenGL backend (assumes that luagl is installed):
+
+    ```lua
+    local luagl = require"luagl"
+    local lpugl = require"lpugl_opengl"
+    local world = lpugl.newWorld("Hello World App")
+
+    local view = world:newView 
+    {
+        title     = "Hello World Window",
+        size      = {500, 500},
+        resizable = true,
+    
+        eventFunc = function(view, event, ...)
+            if event == "CREATE" then
+                local w, h = view:getSize()
+                gl.Viewport(0, 0, w, h)
+            elseif event == "EXPOSE" then
+                gl.ClearColor(0, 0, 0, 0)
+                gl.Clear(gl.COLOR_BUFFER_BIT)
+                gl.Begin('TRIANGLES')
+                gl.Vertex( 0,  0.75, 0)
+                gl.Vertex(-0.75, -0.75, 0)
+                gl.Vertex( 0.75, -0.75, 0)
+                gl.End()
+            elseif event == "CLOSE" then
+              view:close()
+            end
+        end
+    }
+    view:show()
+
+    while world:hasViews() do
+        view:postRedisplay()
+        world:update()
+    end
+    ```
+    you can install luagl on ubuntu with ```sudo luarocks install luagl```
+    
 [Pugl]:                     https://drobilla.net/software/pugl
 [DPF]:                      https://github.com/DISTRHO/DPF
 [LDPF-Examples]:            https://github.com/LDPF/LDPF-Examples
