@@ -14,6 +14,15 @@
   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
+#ifndef GL_SILENCE_DEPRECATION
+#  define GL_SILENCE_DEPRECATION 1
+#endif
+
+// OpenGL is deprecated since macOS 10.14 but still functional;
+// suppress the deprecation warnings as long as this backend exists.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #include <assert.h>
 #include <mach/mach_time.h>
 #include <cairo-quartz.h>
@@ -356,7 +365,7 @@ void*
 puglCairoBackendGetNativeWorld(PuglWorld* PUGL_UNUSED(world))
 {
     CGContextRef contextRef =
-      (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+      (CGContextRef)[[NSGraphicsContext currentContext] CGContext];
     return contextRef;
 }
 
@@ -372,3 +381,5 @@ puglCairoBackend(void)
   
     return &backend;
 }
+
+#pragma clang diagnostic pop

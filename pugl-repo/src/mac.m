@@ -410,7 +410,7 @@ rescheduleProcessTimer(PuglWorld* world)
     return sizePoints(puglview, puglview->reqWidth, puglview->reqHeight);
   }
 
-  return NSMakeSize(NSViewNoInstrinsicMetric, NSViewNoInstrinsicMetric);
+  return NSMakeSize(NSViewNoIntrinsicMetric, NSViewNoIntrinsicMetric);
 }
 
 - (BOOL)isFlipped
@@ -491,10 +491,10 @@ getModifiers(const NSEvent* const ev)
 {
   const NSEventModifierFlags modifierFlags = [ev modifierFlags];
 
-  return (((modifierFlags & NSShiftKeyMask) ? PUGL_MOD_SHIFT : 0) |
-          ((modifierFlags & NSControlKeyMask) ? PUGL_MOD_CTRL : 0) |
-          ((modifierFlags & NSAlternateKeyMask) ? PUGL_MOD_ALT : 0) |
-          ((modifierFlags & NSCommandKeyMask) ? PUGL_MOD_SUPER : 0));
+  return (((modifierFlags & NSEventModifierFlagShift) ? PUGL_MOD_SHIFT : 0) |
+          ((modifierFlags & NSEventModifierFlagControl) ? PUGL_MOD_CTRL : 0) |
+          ((modifierFlags & NSEventModifierFlagOption) ? PUGL_MOD_ALT : 0) |
+          ((modifierFlags & NSEventModifierFlagCommand) ? PUGL_MOD_SUPER : 0));
 }
 
 static PuglKey
@@ -1208,7 +1208,7 @@ void*
 puglGetNativeWorld(PuglWorld* PUGL_UNUSED(world))
 {
   CGContextRef contextRef =
-    (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+    (CGContextRef)[[NSGraphicsContext currentContext] CGContext];
   return contextRef;
 }
 
@@ -1349,12 +1349,12 @@ puglRealize(PuglView* view)
     [impl->wrapperView setHidden:NO];
 
     unsigned style =
-      (NSClosableWindowMask | NSTitledWindowMask | NSMiniaturizableWindowMask);
+      (NSWindowStyleMaskClosable | NSWindowStyleMaskTitled | NSWindowStyleMaskMiniaturizable);
     if (view->hints[PUGL_IS_POPUP]) {
       style = NSWindowStyleMaskBorderless;
     }
     if (view->hints[PUGL_RESIZABLE]) {
-      style |= NSResizableWindowMask;
+      style |= NSWindowStyleMaskResizable;
     }
     NSRect contentRect = rectToScreen([NSScreen mainScreen], framePt);
 
@@ -1628,7 +1628,7 @@ puglSendEvent(PuglView* view, const PuglEvent* event)
     const NSPoint    center  = {NSMidX(rect), NSMidY(rect)};
 
     NSEvent* nsevent =
-      [NSEvent otherEventWithType:NSApplicationDefined
+      [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                          location:center
                     modifierFlags:0
                         timestamp:[[NSProcessInfo processInfo] systemUptime]
@@ -1680,11 +1680,11 @@ puglUpdate(PuglWorld* world, const double timeout)
   world->impl->polling = true;
   bool hadEvent = false;
   for (NSEvent* ev = NULL;
-       (ev = [world->impl->app nextEventMatchingMask:NSAnyEventMask
+       (ev = [world->impl->app nextEventMatchingMask:NSEventMaskAny
                                            untilDate:date
                                               inMode:NSDefaultRunLoopMode
                                              dequeue:YES]);) {
-    if ([ev type] == NSApplicationDefined && [ev subtype] == PUGL_CLIENT) {
+    if ([ev type] == NSEventTypeApplicationDefined && [ev subtype] == (NSEventSubtype)PUGL_CLIENT) {
       dispatchClientEvent(world, ev);
     }
 
@@ -2013,8 +2013,8 @@ puglRequestClipboard(PuglView* view)
 {
   NSPasteboard* const pasteboard = [NSPasteboard generalPasteboard];
 
-  if ([[pasteboard types] containsObject:NSStringPboardType]) {
-    const NSString* str  = [pasteboard stringForType:NSStringPboardType];
+  if ([[pasteboard types] containsObject:NSPasteboardTypeString]) {
+    const NSString* str  = [pasteboard stringForType:NSPasteboardTypeString];
     const char*     utf8 = [str UTF8String];
 
     puglSetBlob(&view->clipboard, utf8, strlen(utf8));
@@ -2099,10 +2099,10 @@ puglSetClipboard(PuglWorld*  world,
 
   NSString* nsString = [NSString stringWithUTF8String:str];
   if (nsString) {
-    [pasteboard declareTypes:[NSArray arrayWithObjects:NSStringPboardType, nil]
+    [pasteboard declareTypes:[NSArray arrayWithObjects:NSPasteboardTypeString, nil]
                        owner:nil];
 
-    [pasteboard setString:nsString forType:NSStringPboardType];
+    [pasteboard setString:nsString forType:NSPasteboardTypeString];
 
     return PUGL_SUCCESS;
   }

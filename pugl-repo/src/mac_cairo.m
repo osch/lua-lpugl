@@ -252,7 +252,7 @@ puglMacCairoEnter(PuglView*              view,
     if (rects && view->impl->trySurfaceCache) {
         rects->rectsCount = 0;
     }
-    CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+    CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
      
     CGContextScaleCTM(context, sizePt.width/sizePx.width, sizePt.height/sizePx.height);
 
@@ -301,7 +301,7 @@ puglMacCairoLeave(PuglView*              view,
         
         unsigned char* surfaceData = cairo_image_surface_get_data(drawView->surface);
 
-        CGContextRef    context     = [[NSGraphicsContext currentContext] graphicsPort];
+        CGContextRef    context     = [[NSGraphicsContext currentContext] CGContext];
         unsigned char*  contextData = CGBitmapContextGetData(context);
         bool            optimized   = false;
         if (contextData)
@@ -350,7 +350,7 @@ puglMacCairoLeave(PuglView*              view,
             {
                 const NSSize viewSizePt = [drawView bounds].size;
                 const NSSize viewSizePx = [drawView convertSizeToBacking: viewSizePt];
-                CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
+                CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
                 CGContextSetInterpolationQuality(context, kCGInterpolationNone);
                 
                 double scaleFactor = [[view->impl->window screen] backingScaleFactor];
@@ -396,7 +396,7 @@ void*
 puglCairoBackendGetNativeWorld(PuglWorld* PUGL_UNUSED(world))
 {
   CGContextRef contextRef =
-    (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+    (CGContextRef)[[NSGraphicsContext currentContext] CGContext];
   return contextRef;
 }
 
