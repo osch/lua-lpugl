@@ -434,7 +434,7 @@ rescheduleProcessTimer(PuglWorld* world)
 {
   if (puglview) {
     PuglEvent ev; // = {{PUGL_FOCUS_IN, 0}}; <-- this caused problems with gcc 15.2.1
-    puglClearEventStruct(&event, PUGL_FOCUS_IN);
+    puglClearEventStruct(&ev, PUGL_FOCUS_IN);
     ev.focus.mode = PUGL_CROSSING_NORMAL;
     puglDispatchEvent(puglview, &ev);
   }
@@ -443,7 +443,7 @@ rescheduleProcessTimer(PuglWorld* world)
 {
   if (puglview) {
     PuglEvent ev; // = {{PUGL_FOCUS_OUT, 0}}; <-- this caused problems with gcc 15.2.1
-    puglClearEventStruct(&event, PUGL_FOCUS_OUT);
+    puglClearEventStruct(&ev, PUGL_FOCUS_OUT);
     ev.focus.mode = PUGL_CROSSING_NORMAL;
     puglDispatchEvent(puglview, &ev);
   }
@@ -1730,8 +1730,15 @@ puglProcessEvents(PuglView* view)
 double
 puglGetTime(const PuglWorld* world)
 {
-  return (mach_absolute_time() / 1e9) - world->startTime;
+  static mach_timebase_info_data_t timebase = {0, 0};
+  if (timebase.denom == 0) {
+    mach_timebase_info(&timebase);
+  }
+  return ((double)mach_absolute_time() * timebase.numer)
+         / (timebase.denom * 1e9)
+         - world->startTime;
 }
+
 
 PuglStatus
 puglPostRedisplay(PuglView* view)
