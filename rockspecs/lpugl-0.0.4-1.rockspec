@@ -1,5 +1,5 @@
 package = "lpugl"
-version = "0.0.3-1"
+version = "0.0.4-1"
 local versionNumber = version:gsub("^(.*)-.-$", "%1")
 source = {
   url = "https://github.com/osch/lua-lpugl/archive/v"..versionNumber..".zip",
@@ -19,7 +19,7 @@ description = {
   ]],
 }
 dependencies = {
-  "lua >= 5.1, <= 5.4",
+  "lua >= 5.1, <= 5.5",
   "luarocks-build-extended"
 }
 build = {
